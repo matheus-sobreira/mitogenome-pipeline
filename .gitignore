@@ -1,0 +1,37 @@
+# ── Nextflow ──────────────────────────────────────────────────────────────────
+.nextflow/
+.nextflow.log*
+work/
+.nextflow.cache/
+
+# ── Resultados (gerados na execução — não versionar dados brutos) ─────────────
+results/
+
+# ── Dados brutos e arquivos grandes ──────────────────────────────────────────
+*.fastq
+*.fq
+*.fastq.gz
+*.fq.gz
+*.sra
+*.bam
+*.sam
+
+# ── Semente (arquivo de dados — versionar apenas se pequeno e público) ────────
+# Descomente a linha abaixo se quiser versionar a semente cox1 (~1.5 kb):
+# !data/seeds/*.fasta
+data/seeds/*.fasta
+
+# ── Python / scripts auxiliares ───────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.py   # scripts temporários da raiz (search_sra.py, calc_sra.py etc.)
+
+# ── Sistema operacional ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── VS Code ───────────────────────────────────────────────────────────────────
+.vscode/
+*.code-workspace
