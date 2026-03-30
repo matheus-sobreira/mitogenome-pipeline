@@ -8,8 +8,6 @@
  * Autor: Matheus Sobreira Benevides
  */
 
-nextflow.enable.dsl = 2
-
 include { SRA_DOWNLOAD } from './modules/sra_download'
 include { FASTQC       } from './modules/fastqc'
 include { TRIM_GALORE  } from './modules/trim_galore'
@@ -18,7 +16,7 @@ include { NOVOPLASTY   } from './modules/novoplasty'
 // Validação dos parâmetros obrigatórios
 if (!params.sra_accession) {
     error "ERROR: Informe o acesso SRA com: --sra_accession <ACCESSION>\n" +
-          "       Exemplo: --sra_accession SRR2081280"
+          "       Exemplo: --sra_accession SRR36152783"
 }
 if (!params.seed) {
     error "ERROR: Informe o arquivo semente com: --seed <caminho/para/seed.fasta>\n" +

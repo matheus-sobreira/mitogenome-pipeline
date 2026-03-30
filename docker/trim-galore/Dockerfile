@@ -29,7 +29,8 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 # Instala Cutadapt (dependência do Trim Galore)
-RUN pip3 install --no-cache-dir cutadapt==4.6
+# --break-system-packages necessário no Ubuntu 22.04+ (PEP 668)
+RUN pip3 install --no-cache-dir --break-system-packages cutadapt==4.6
 
 # Instala FastQC (necessário para relatórios do Trim Galore)
 RUN wget -q \

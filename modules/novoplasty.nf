@@ -27,7 +27,7 @@ process NOVOPLASTY {
 
     output:
     path "*.fasta",    emit: assembly, optional: true
-    path "log_*.txt",  emit: log
+    path "log_*.txt",  emit: log, optional: true
     path "config.txt", emit: config
 
     script:

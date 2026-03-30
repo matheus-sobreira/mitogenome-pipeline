@@ -25,7 +25,9 @@ data/seeds/*.fasta
 __pycache__/
 *.pyc
 *.pyo
-*.py   # scripts temporários da raiz (search_sra.py, calc_sra.py etc.)
+
+# ── Arquivo de contexto local (apenas no PC, não versionar) ──────────────────
+CONTEXT.md
 
 # ── Sistema operacional ───────────────────────────────────────────────────────
 .DS_Store

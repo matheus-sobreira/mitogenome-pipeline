@@ -21,14 +21,14 @@ RUN apt-get update -y && \
     rm -rf /var/lib/apt/lists/*
 
 # Instala NOVOPlasty
+# O padrão de tag no GitHub é 'NOVOPlasty<versão>' (ex: NOVOPlasty4.3.1)
 RUN wget -q \
-    "https://github.com/ndierckx/NOVOPlasty/archive/refs/tags/NOVOPlasty${NOVOPLASTY_VERSION}.tar.gz" && \
-    tar -xzf "NOVOPlasty${NOVOPLASTY_VERSION}.tar.gz" && \
-    mv "NOVOPlasty-NOVOPlasty${NOVOPLASTY_VERSION}" /opt/novoplasty && \
-    rm "NOVOPlasty${NOVOPLASTY_VERSION}.tar.gz"
-
-# Torna o script executável
-RUN chmod +x /opt/novoplasty/NOVOPlasty4.3.pl
+    "https://github.com/ndierckx/NOVOPlasty/archive/refs/tags/NOVOPlasty${NOVOPLASTY_VERSION}.tar.gz" \
+    -O novoplasty.tar.gz && \
+    tar -xzf novoplasty.tar.gz && \
+    mv NOVOPlasty-NOVOPlasty${NOVOPLASTY_VERSION} /opt/novoplasty && \
+    rm novoplasty.tar.gz && \
+    chmod +x /opt/novoplasty/NOVOPlasty4.3.pl
 
 ENV PATH="/opt/novoplasty:$PATH"
 

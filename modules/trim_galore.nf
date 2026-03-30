@@ -24,12 +24,16 @@ process TRIM_GALORE {
     path "*_trimming_report.txt", emit: reports
 
     script:
+    // Trim Galore usa internamente 3 threads adicionais por core (pigz, cutadapt).
+    // Limitar a 2 cores evita ultrapassar a alocação de CPU do processo.
+    def tg_cores = Math.min(task.cpus as int, 2)
+
     """
     trim_galore \\
         --paired \\
         --quality   ${params.trim_quality} \\
         --length    ${params.min_length}   \\
-        --cores     ${task.cpus}           \\
+        --cores     ${tg_cores}            \\
         ${read1}                           \\
         ${read2}
     """
