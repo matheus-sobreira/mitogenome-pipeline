@@ -68,6 +68,6 @@ PATPRO                =
 EOF
 
     # Executa o NOVOPlasty
-    perl /opt/novoplasty/NOVOPlasty4.3.pl -c config.txt
+    perl /opt/novoplasty/NOVOPlasty4.3.1.pl -c config.txt
     """
 }

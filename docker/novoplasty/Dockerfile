@@ -16,7 +16,8 @@ ARG NOVOPLASTY_VERSION=4.3.1
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
         perl \
-        wget && \
+        wget \
+        ca-certificates && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -28,10 +29,10 @@ RUN wget -q \
     tar -xzf novoplasty.tar.gz && \
     mv NOVOPlasty-NOVOPlasty${NOVOPLASTY_VERSION} /opt/novoplasty && \
     rm novoplasty.tar.gz && \
-    chmod +x /opt/novoplasty/NOVOPlasty4.3.pl
+    chmod +x /opt/novoplasty/NOVOPlasty${NOVOPLASTY_VERSION}.pl
 
 ENV PATH="/opt/novoplasty:$PATH"
 
 WORKDIR /data
 
-CMD ["perl", "/opt/novoplasty/NOVOPlasty4.3.pl"]
+CMD ["perl", "/opt/novoplasty/NOVOPlasty4.3.1.pl"]
