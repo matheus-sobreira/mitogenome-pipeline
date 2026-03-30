@@ -17,9 +17,9 @@ results/
 *.sam
 
 # ── Semente (arquivo de dados — versionar apenas se pequeno e público) ────────
-# Descomente a linha abaixo se quiser versionar a semente cox1 (~1.5 kb):
-# !data/seeds/*.fasta
+# Semente cox1 pequena e pública — versionada para reprodutibilidade:
 data/seeds/*.fasta
+!data/seeds/*.fasta
 
 # ── Python / scripts auxiliares ───────────────────────────────────────────────
 __pycache__/
