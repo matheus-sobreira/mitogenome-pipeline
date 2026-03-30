@@ -25,8 +25,8 @@ process FASTQC {
     """
     fastqc \\
         --threads ${task.cpus} \\
-        --outdir . \\
-        ${read1} \\
+        --outdir .             \\
+        ${read1}               \\
         ${read2}
     """
 }

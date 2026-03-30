@@ -10,6 +10,10 @@ process SRA_DOWNLOAD {
 
     tag "${accession}"
 
+    // Downloads do NCBI podem falhar por instabilidade de rede
+    errorStrategy 'retry'
+    maxRetries    2
+
     publishDir "${params.outdir}/reads/raw", mode: 'copy', pattern: '*.fastq'
 
     input:
