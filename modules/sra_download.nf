@@ -26,6 +26,8 @@ process SRA_DOWNLOAD {
           emit: reads
 
     script:
+    def max_reads = params.sra_max_reads ? params.sra_max_reads as long : 0
+
     """
     # Habilita SDL2 — necessário no SRA-Toolkit 3.x
     mkdir -p \$HOME/.ncbi
@@ -51,5 +53,13 @@ MKFG
 
     # Libera espaço: apaga o diretório .sra (não é mais necessário)
     rm -rf ${accession}
+
+    # Etapa 3: se sra_max_reads definido, trunca os FASTQs para economizar disco e tempo
+    if [ ${max_reads} -gt 0 ]; then
+        MAX_LINES=\$(( ${max_reads} * 4 ))
+        echo "Truncando FASTQs para ${max_reads} reads (\$MAX_LINES linhas)..."
+        head -n \$MAX_LINES ${accession}_1.fastq > tmp_1.fastq && mv tmp_1.fastq ${accession}_1.fastq
+        head -n \$MAX_LINES ${accession}_2.fastq > tmp_2.fastq && mv tmp_2.fastq ${accession}_2.fastq
+    fi
     """
 }
