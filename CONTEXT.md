@@ -48,13 +48,13 @@
 
 ## Espécie de Validação (testes do pipeline)
 
-- **Espécie:** *Caenorhabditis elegans* (nematódeo modelo)
-- **mtDNA:** NC_001328.1 → **13.794 bp**
-- **Dataset SRA:** `SRR36152783`
-  - Tamanho total: 1,18 GB comprimido / 4,39 Gb bases
-  - Com limite de 500k reads: ~40 MB download / ~300 MB FASTQ
-  - Cobertura estimada do mtDNA: ~544x
-- **Semente:** gene cox1 (~1.530 bp) — ver `data/seeds/COMO_OBTER_SEMENTE.md`
+- **Espécie:** *Diploprion bifasciatus* (peixe-sabão barrado)
+- **mtDNA publicado:** PZ143763.1 → **16.805 bp**
+- **Dataset SRA:** `SRR36182901` (NovaSeq X Plus, 2×151 bp, 12 M pares, ~1,2 GB)
+- **Semente:** gene cox1 de *D. bifasciatus* (PZ143763.1, 1.560 bp)
+- **Configuração:** `conf/test.config` + perfil `test` em `nextflow.config`
+- **Resultado:** montagem circularizada com sucesso (k-mer 33)
+  - `results/test_d_bifasciatus/assembly/Circularized_assembly_1_SRR36182901.fasta`
 
 ## Objeto Principal do TCC
 
@@ -122,21 +122,29 @@
 - [x] Arquivo de fundamentação teórica para TCC: `docs/fundamentacao_teorica.md`
 
 ### Pendente ⏳
+- [ ] **Fase 2 — Anotação funcional** (MITOS2 + tRNAscan-SE):
+  - Criar Dockerfile para MITOS2 (`docker/mitos2/Dockerfile`)
+  - Criar Dockerfile para tRNAscan-SE (`docker/trnascan/Dockerfile`)
+  - Criar módulo Nextflow `modules/mitos2.nf`
+  - Criar módulo Nextflow `modules/trnascan.nf`
+  - Integrar no `main.nf` após NOVOPLASTY
+  - Executar para *A. leari* — espera-se 13 proteínas, 22 tRNAs, 2 rRNAs
+  - Gerar mapa circular anotado do mitogenoma
 - [ ] Validar biologicamente a montagem de D. bifasciatus (BLAST contra PZ143763.1)
-- [ ] Anotação funcional da montagem A. leari (Fase 2 — MITOS2 + tRNAscan-SE)
-- [ ] Atualizar README.md com resultados reais
-- [ ] Substituir "resultados esperados" por resultados reais no Capítulo 5 do TCC
+- [ ] Publicar mitogenoma de *A. leari* no GenBank
 
 ---
 
 ## Pendências no Documento do TCC
 
-- Contextualizar melhor o problema na Introdução *(nota do professor)*
-- Adicionar seção `4.2.1` — SRA-Toolkit (atualmente sem seção própria)
-- Substituir "resultados esperados" por resultados reais no Capítulo 5 (agora disponíveis!)
-- Adicionar imagens das ferramentas e gráficos na Metodologia
-- Usar `pipeline_data_reduction.png` e `docs/fundamentacao_teorica.md` na apresentação
-- Padronizar para ABNT/UERN no Overleaf (LaTeX) após defesa do projeto
+- ~~Contextualizar melhor o problema na Introdução~~ ✅ (Justificativa expandida em `docs/atualizacoes_tcc.md`)
+- ~~Adicionar seção `4.2.1` — SRA-Toolkit~~ ✅ (adicionada em `docs/atualizacoes_tcc.md`)
+- ~~Substituir "resultados esperados" por resultados reais no Capítulo 5~~ ✅ (Cap. 5 reescrito)
+- [ ] Adicionar imagens das ferramentas e gráficos na Metodologia
+- [ ] Usar `pipeline_data_reduction.png` e `docs/fundamentacao_teorica.md` na apresentação
+- [ ] Adicionar resultados da Fase 2 (anotação) ao Cap. 5 quando disponíveis
+- [ ] Padronizar para ABNT/UERN no Overleaf (LaTeX) após defesa do projeto
+- **TCC versão completa atualizada:** `docs/atualizacoes_tcc.md`
 
 ---
 
@@ -154,7 +162,26 @@
 
 ## Próxima Sessão — Retomar aqui
 
-1. Anotação funcional do mitogenoma de *A. leari* com MITOS2 + tRNAscan-SE (Fase 2)
-2. Validar biologicamente a montagem de *D. bifasciatus* (BLAST contra NC_082165.1)
-3. Atualizar README.md com resultados reais e instruções atualizadas
-4. Montar slides do TCC usando `docs/fundamentacao_teorica.md` e `pipeline_data_reduction.png`
+### Prioridade 1 — Fase 2: Anotação Funcional (MITOS2 + tRNAscan-SE)
+
+**Objetivo:** Anotar o mitogenoma de *A. leari* (16.986 bp) identificando os 37 genes esperados.
+
+**Passos:**
+1. Criar `docker/mitos2/Dockerfile` — MITOS2 com dependência do banco de dados RefSeq
+2. Criar `docker/trnascan/Dockerfile` — tRNAscan-SE 2.0
+3. Criar `modules/mitos2.nf` — recebe FASTA da montagem, produz GFF3 + mapa circular
+4. Criar `modules/trnascan.nf` — recebe FASTA, produz tabela de tRNAs
+5. Integrar ambos no `main.nf` (após `NOVOPLASTY`)
+6. Adicionar perfis/parâmetros no `nextflow.config` (código genético mitocondrial de vertebrados = 2)
+7. Executar: `nextflow run main.nf -profile a_leari`
+8. Validar: comparar genes anotados com *A. hyacinthinus* (NC_082165.1)
+9. Atualizar Cap. 5 do TCC com resultados da anotação
+
+**Resultado esperado:** 13 genes codificadores de proteínas + 22 tRNAs + 2 rRNAs + região controle (D-loop)
+
+**Input:** `results/a_leari/assembly/Circularized_assembly_1_SRR28399504.fasta`
+
+### Prioridade 2 — Pós-anotação
+1. Validar biologicamente a montagem de *D. bifasciatus* (BLAST contra PZ143763.1)
+2. Montar slides do TCC usando `docs/fundamentacao_teorica.md` e `pipeline_data_reduction.png`
+3. Publicar mitogenoma no GenBank
