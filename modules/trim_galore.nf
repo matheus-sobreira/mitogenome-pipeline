@@ -11,7 +11,7 @@ process TRIM_GALORE {
 
     tag "${sample_id}"
 
-    publishDir "${params.outdir}/reads/trimmed", mode: 'copy'
+    publishDir "${params.outdir}/qc/trim_galore", mode: 'copy', pattern: '*_trimming_report.txt'
 
     input:
     tuple val(sample_id), path(read1), path(read2)
@@ -36,5 +36,14 @@ process TRIM_GALORE {
         --cores     ${tg_cores}            \\
         ${read1}                           \\
         ${read2}
+
+    # Libera espaço: apaga reads brutos originais (resolve symlinks)
+    for f in ${read1} ${read2}; do
+        real=\$(readlink -f "\$f")
+        if [ -f "\$real" ]; then
+            rm -f "\$real"
+            echo "Limpeza: apagado \$real"
+        fi
+    done
     """
 }

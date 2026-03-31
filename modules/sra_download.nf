@@ -14,7 +14,7 @@ process SRA_DOWNLOAD {
     errorStrategy 'retry'
     maxRetries    2
 
-    publishDir "${params.outdir}/reads/raw", mode: 'copy', pattern: '*.fastq'
+    // Sem publishDir — reads brutos serão apagados após uso para economizar disco
 
     input:
     val accession
@@ -26,20 +26,30 @@ process SRA_DOWNLOAD {
           emit: reads
 
     script:
-    // -X N = baixar apenas os primeiros N spots (para testes com datasets limitados)
-    def max_reads = params.sra_max_reads ? "-X ${params.sra_max_reads}" : ""
-
     """
-    # Configuração não-interativa do SRA-Toolkit
-    vdb-config --restore-defaults 2>/dev/null || true
+    # Habilita SDL2 — necessário no SRA-Toolkit 3.x
+    mkdir -p \$HOME/.ncbi
+    cat > \$HOME/.ncbi/user-settings.mkfg << 'MKFG'
+/LIBS/GUID = "d3b07384-d9a3-4f3c-b7e2-4c5c1d3abe42"
+/repository/remote/main/SDL.2/resolver-cgis/enabled = "true"
+/repository/user/cache-disabled = "true"
+MKFG
 
-    # Baixa e converte para FASTQ pareado
-    fasterq-dump \\
+    # Etapa 1: prefetch — baixa o .sra completo localmente (mais confiável que fasterq-dump remoto)
+    prefetch \\
         ${accession} \\
+        --max-size 50G \\
+        --output-directory .
+
+    # Etapa 2: fasterq-dump — converte o .sra local para FASTQ
+    fasterq-dump \\
+        ${accession}/${accession}.sra \\
         --split-files \\
         --threads ${task.cpus} \\
         --outdir . \\
-        --temp /tmp \\
-        ${max_reads}
+        --temp /tmp
+
+    # Libera espaço: apaga o diretório .sra (não é mais necessário)
+    rm -rf ${accession}
     """
 }
