@@ -12,7 +12,8 @@ include { SRA_DOWNLOAD } from './modules/sra_download'
 include { FASTQC       } from './modules/fastqc'
 include { TRIM_GALORE  } from './modules/trim_galore'
 include { NOVOPLASTY   } from './modules/novoplasty'
-include { MITOS2       } from './modules/mitos2'
+include { MITOS2           } from './modules/mitos2'
+include { COMPILE_SUMMARY  } from './modules/compile_summary'
 
 // Validação dos parâmetros obrigatórios
 if (!params.sra_accession) {
@@ -36,6 +37,7 @@ workflow {
     Range mtDNA : ${params.genome_range} bp
     Código gen. : ${params.genetic_code}  (2=vertebrado; 5=invertebrado)
     BD MITOS2   : ${params.mitos2_db ?: '(não informado — etapa de anotação pulada)'}
+    Organismo   : ${params.organism ?: '(não informado)'}
     """.stripIndent()
 
     // Canal com o acesso SRA
@@ -73,6 +75,16 @@ workflow {
             }
 
         MITOS2(circularized_ch, file(params.mitos2_db))
+
+        // ── Etapa 6: Compilar entregáveis ─────────────────────────────
+        // Combina montagem + anotação MITOS2 em pasta organizada
+        summary_ch = circularized_ch
+            .join(MITOS2.out.annotation)
+            .map { sample_id, assembly, mitos_dir ->
+                tuple(sample_id, assembly, mitos_dir)
+            }
+
+        COMPILE_SUMMARY(summary_ch)
 
     } else {
         log.warn "MITOS2: parâmetro 'mitos2_db' não informado. Etapa de anotação pulada."
