@@ -2,7 +2,7 @@
  * Módulo: SRA_DOWNLOAD
  * Baixa reads pareados de uma entrada do NCBI SRA usando fasterq-dump.
  *
- * Entradas : acesso SRA (ex: 'SRR36152783')
+ * Entradas : acesso SRA (ex: 'SRR36152783'), max_reads (0 = baixar tudo)
  * Saídas   : tuple (sample_id, read1.fastq, read2.fastq)
  */
 
@@ -18,6 +18,7 @@ process SRA_DOWNLOAD {
 
     input:
     val accession
+    val max_reads
 
     output:
     tuple val(accession),
@@ -26,8 +27,6 @@ process SRA_DOWNLOAD {
           emit: reads
 
     script:
-    def max_reads = params.sra_max_reads ? params.sra_max_reads as long : 0
-
     """
     # Habilita SDL2 — necessário no SRA-Toolkit 3.x
     mkdir -p \$HOME/.ncbi

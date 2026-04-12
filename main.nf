@@ -8,6 +8,7 @@
  * Autor: Matheus Sobreira Benevides
  */
 
+include { SRA_PILOT    } from './modules/sra_pilot'
 include { SRA_DOWNLOAD } from './modules/sra_download'
 include { FASTQC       } from './modules/fastqc'
 include { TRIM_GALORE  } from './modules/trim_galore'
@@ -36,6 +37,7 @@ workflow {
     Saída       : ${params.outdir}
     Range mtDNA : ${params.genome_range} bp
     Código gen. : ${params.genetic_code}  (2=vertebrado; 5=invertebrado)
+    Max reads   : ${params.sra_max_reads != null ? params.sra_max_reads : '(automático — Pilot QC)'}
     BD MITOS2   : ${params.mitos2_db ?: '(não informado — etapa de anotação pulada)'}
     Organismo   : ${params.organism ?: '(não informado)'}
     """.stripIndent()
@@ -46,8 +48,20 @@ workflow {
     // Arquivo semente para o NOVOPlasty
     seed_file = file(params.seed)
 
+    // ── Etapa 0: Pilot QC (automático se sra_max_reads não definido) ──
+    // Baixa uma amostra pequena (500K reads) e analisa qualidade,
+    // fração mitocondrial e adaptadores para recomendar o max_reads ideal.
+    if (params.sra_max_reads != null) {
+        log.info "Pilot QC: pulado (sra_max_reads = ${params.sra_max_reads})"
+        max_reads_ch = Channel.value(params.sra_max_reads)
+    } else {
+        log.info "Pilot QC: ativado — analisando ${params.pilot_reads ?: 500000} reads piloto..."
+        SRA_PILOT(accession_ch, seed_file)
+        max_reads_ch = SRA_PILOT.out.recommended_reads
+    }
+
     // ── Etapa 1: Download das leituras via SRA-Toolkit ──────────────
-    SRA_DOWNLOAD(accession_ch)
+    SRA_DOWNLOAD(accession_ch, max_reads_ch)
 
     // ── Etapa 2: Controle de qualidade das leituras brutas ──────────
     FASTQC(SRA_DOWNLOAD.out.reads)
