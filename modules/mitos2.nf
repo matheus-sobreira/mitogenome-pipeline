@@ -27,7 +27,7 @@ process MITOS2 {
 
     tag "${sample_id}"
 
-    publishDir "${params.outdir}/annotation/mitos2", mode: 'copy'
+    publishDir "${params.outdir}/annotation/mitos2", mode: 'copy', overwrite: true
 
     input:
     tuple val(sample_id), path(assembly)
@@ -40,14 +40,14 @@ process MITOS2 {
     path "${sample_id}/*.bed",                        emit: bed,      optional: true
 
     script:
-    def db_name   = db_dir.name
-    def db_parent = db_dir.parent
+    def db_name = db_dir.name
     """
+    mkdir -p ${sample_id}
     runmitos.py \\
         -i ${assembly} \\
         -c ${params.genetic_code} \\
         -o ${sample_id} \\
         -r ${db_name} \\
-        -R ${db_parent}
+        -R \${PWD}
     """
 }
