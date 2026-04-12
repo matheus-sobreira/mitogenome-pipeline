@@ -435,7 +435,15 @@ def compile_summary(args):
         if os.path.exists(gb_dst):
             shutil.rmtree(gb_dst)
         shutil.copytree(args.genbank_dir, gb_dst)
+        # Count specific file types for display
+        gbk_files = [f for f in os.listdir(args.genbank_dir) if f.endswith(".gbk")]
+        map_files = [f for f in os.listdir(args.genbank_dir)
+                     if f.startswith("circular_map.")]
         print(f"  [12] GenBank submission → {gb_dst}")
+        if gbk_files:
+            print(f"       GenBank Flat File: {', '.join(gbk_files)}")
+        if map_files:
+            print(f"       Mapa circular: {', '.join(map_files)}")
 
     # ── 13. Ordem gênica ─────────────────────────────────────────────────
     geneorder_path = os.path.join(mitos_dir, "result.geneorder")

@@ -23,10 +23,17 @@ process COMPILE_SUMMARY {
 
     script:
     def organism = params.organism ?: "Unknown organism"
-    def genbank_arg = ""
     """
-    # Gerar arquivos GenBank (.tbl + .fsa)
+    # Gerar arquivos GenBank (.tbl + .fsa) — formato submission
     python3 ${projectDir}/scripts/gff2genbank.py \\
+        --gff   ${mitos_dir}/result.gff \\
+        --fasta ${assembly} \\
+        --organism "${organism}" \\
+        --transl-table ${params.genetic_code} \\
+        --outdir genbank_tmp/
+
+    # Gerar GenBank Flat File (.gbk) + mapa circular (SVG/PDF)
+    python3 ${projectDir}/scripts/generate_genbank.py \\
         --gff   ${mitos_dir}/result.gff \\
         --fasta ${assembly} \\
         --organism "${organism}" \\
