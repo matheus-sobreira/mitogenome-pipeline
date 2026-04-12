@@ -11,7 +11,8 @@ $images = @(
     @{ tag = "mitogenome-pipeline/sra-tools:1.0";   path = "docker\sra-tools"   },
     @{ tag = "mitogenome-pipeline/fastqc:1.0";       path = "docker\fastqc"       },
     @{ tag = "mitogenome-pipeline/trim-galore:1.0";  path = "docker\trim-galore"  },
-    @{ tag = "mitogenome-pipeline/novoplasty:1.0";   path = "docker\novoplasty"   }
+    @{ tag = "mitogenome-pipeline/novoplasty:1.0";   path = "docker\novoplasty"   },
+    @{ tag = "mitogenome-pipeline/mitos2:1.0";       path = "docker\mitos2"       }
 )
 
 Write-Host ""

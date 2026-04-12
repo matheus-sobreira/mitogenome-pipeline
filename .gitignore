@@ -34,6 +34,9 @@ CONTEXT.md
 Thumbs.db
 desktop.ini
 
+# ── Bancos de dados (arquivos grandes, baixados localmente) ──────────────────
+data/databases/
+
 # ── VS Code ───────────────────────────────────────────────────────────────────
 .vscode/
 *.code-workspace
