@@ -116,13 +116,27 @@ nextflow run main.nf -profile a_leari --sra_max_reads 20000000
 
 ## 6. Retomar execução interrompida
 
-```bash
-nextflow run main.nf -profile a_leari -resume
+O diretório `work/` é organizado por espécie e timestamp:
+
+```
+work/
+├── a_leari/
+│   ├── 2026-04-12_14h30/    ← run que falhou
+│   └── 2026-04-12_20h15/    ← run que funcionou
+└── d_bifasciatus/
+    └── 2026-04-10_09h00/
 ```
 
-O `-resume` reutiliza resultados cacheados em `work/`. Só etapas pendentes serão re-executadas.
+Para retomar um run específico, use `-resume` com `-w` apontando para o diretório:
 
-> **Atenção**: se `work/` foi apagado, o cache não existe e tudo será re-executado.
+```bash
+# Retomar o último run (Nextflow detecta automaticamente)
+nextflow run main.nf -profile a_leari -resume -w work/a_leari/2026-04-12_20h15
+
+# Sem -w, uma nova pasta com timestamp é criada (não encontra o cache anterior)
+```
+
+> **Dica**: use `ls work/a_leari/` para ver os runs anteriores e escolher qual retomar.
 
 ---
 
@@ -168,8 +182,11 @@ results/a_leari/
 ## 8. Limpeza
 
 ```bash
-# Remover cache de trabalho (libera espaço)
-rm -rf work/
+# Remover cache de trabalho de uma espécie inteira
+rm -rf work/a_leari/
+
+# Remover apenas um run específico
+rm -rf work/a_leari/2026-04-12_14h30/
 
 # Remover resultados de uma espécie
 sudo rm -rf results/a_leari/

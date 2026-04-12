@@ -38,6 +38,7 @@ process MITOS2 {
     path "${sample_id}/*.gff",                        emit: gff,      optional: true
     path "${sample_id}/*.faa",                        emit: proteins, optional: true
     path "${sample_id}/*.bed",                        emit: bed,      optional: true
+    path "${sample_id}/structure_svgs/**/*.svg",      emit: svgs,     optional: true
 
     script:
     def db_name = db_dir.name
@@ -49,5 +50,48 @@ process MITOS2 {
         -o ${sample_id} \\
         -r ${db_name} \\
         -R \${PWD}
+
+    # ── Gerar SVGs de estrutura secundária (tRNA + rRNA) via RNAplot ──
+    WORKDIR=\$(pwd)
+    MITFI="\${WORKDIR}/${sample_id}/mitfi-global"
+    SVGDIR="\${WORKDIR}/${sample_id}/structure_svgs"
+    mkdir -p "\${SVGDIR}/tRNA" "\${SVGDIR}/rRNA"
+    TMPDIR=\$(mktemp -d) && cd "\${TMPDIR}"
+
+    for NC_TYPE in tRNA rRNA; do
+        if [[ "\${NC_TYPE}" == "tRNA" ]]; then
+            NC_FILE="\${MITFI}/sequence.fas-0_tRNAout.nc"
+            DEST="\${SVGDIR}/tRNA"
+        else
+            NC_FILE="\${MITFI}/sequence.fas-0_rRNAout.nc"
+            DEST="\${SVGDIR}/rRNA"
+        fi
+        [[ ! -f "\${NC_FILE}" ]] && continue
+
+        name="" seq="" struct=""
+        while IFS= read -r line; do
+            if [[ "\${line}" == ">"* ]]; then
+                if [[ -n "\${name}" && -n "\${seq}" && -n "\${struct}" ]]; then
+                    echo -e ">\${name}\\n\${seq}\\n\${struct}" | RNAplot -f svg 2>/dev/null
+                    svgout=\$(ls -t *_ss.svg 2>/dev/null | head -1)
+                    [[ -n "\${svgout}" ]] && mv "\${svgout}" "\${DEST}/\${name}.svg"
+                fi
+                is_primary=\$(echo "\${line}" | awk -F'|' '{print \$(NF-2)"|"\$(NF-1)}')
+                if [[ "\${is_primary}" != "1|1" ]]; then name=""; continue; fi
+                name=\$(echo "\${line}" | awk -F'|' '{print \$(NF-3)}')
+                seq="" struct=""
+            elif [[ -n "\${name}" ]]; then
+                if [[ -z "\${seq}" ]]; then seq="\${line}"; else struct="\${line}"; fi
+            fi
+        done < "\${NC_FILE}"
+        if [[ -n "\${name}" && -n "\${seq}" && -n "\${struct}" ]]; then
+            echo -e ">\${name}\\n\${seq}\\n\${struct}" | RNAplot -f svg 2>/dev/null
+            svgout=\$(ls -t *_ss.svg 2>/dev/null | head -1)
+            [[ -n "\${svgout}" ]] && mv "\${svgout}" "\${DEST}/\${name}.svg"
+        fi
+    done
+
+    cd - > /dev/null
+    rm -rf "\${TMPDIR}"
     """
 }

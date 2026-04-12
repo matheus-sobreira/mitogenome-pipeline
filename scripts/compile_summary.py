@@ -457,13 +457,20 @@ def compile_summary(args):
 
     # ── 11. Estruturas secundárias (SVGs) ────────────────────────────────
     svg_src = os.path.join(mitos_dir, "structure_svgs")
+    svg_dst = os.path.join(outdir, "structure_svgs")
+    src_real = os.path.realpath(svg_src)
+    dst_real = os.path.realpath(svg_dst)
     if os.path.isdir(svg_src):
-        svg_dst = os.path.join(outdir, "structure_svgs")
-        if os.path.exists(svg_dst):
-            shutil.rmtree(svg_dst)
-        shutil.copytree(svg_src, svg_dst)
-        svg_count = sum(1 for _, _, files in os.walk(svg_dst) for f in files if f.endswith(".svg"))
-        print(f"  [11] Estruturas secundárias → {svg_dst} ({svg_count} SVGs)")
+        svg_count = sum(1 for _, _, files in os.walk(svg_src) for f in files if f.endswith(".svg"))
+        if svg_count == 0:
+            print(f"  [11] Estruturas secundárias → (diretório vazio, pulando)")
+        elif src_real == dst_real:
+            print(f"  [11] Estruturas secundárias → {svg_dst} ({svg_count} SVGs, in-place)")
+        else:
+            if os.path.exists(svg_dst):
+                shutil.rmtree(svg_dst)
+            shutil.copytree(svg_src, svg_dst)
+            print(f"  [11] Estruturas secundárias → {svg_dst} ({svg_count} SVGs)")
 
     # ── 12. Arquivos para GenBank ────────────────────────────────────────
     if args.genbank_dir and os.path.isdir(args.genbank_dir):
