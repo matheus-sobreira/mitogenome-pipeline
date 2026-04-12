@@ -73,14 +73,44 @@ nextflow run main.nf -profile a_leari
 nextflow run main.nf -profile test
 ```
 
-### Acompanhar em background (sessões longas)
+### Execução resiliente (recomendado para sessões longas)
+
+O script `run_pipeline.sh` executa o pipeline em background com `nohup`.
+O terminal pode ser fechado sem interromper a execução:
 
 ```bash
-# Iniciar em screen
-screen -S pipeline
+# Executar com qualquer perfil
+./run_pipeline.sh -profile a_leari
+
+# Com parâmetros extras
+./run_pipeline.sh -profile a_leari --sra_max_reads 20000000
+
+# Retomar run anterior
+./run_pipeline.sh -profile a_leari -resume -w work/a_leari/2026-04-12_14h30
+```
+
+Após iniciar, o script informa:
+- **Log**: `logs/a_leari_2026-04-12_14h30.log`
+- **PID**: para cancelar com `kill <PID>`
+
+Acompanhar em tempo real:
+
+```bash
+tail -f logs/a_leari_2026-04-12_14h30.log
+```
+
+Ver progresso resumido:
+
+```bash
+grep -E 'process|Completed|ERROR' logs/a_leari_2026-04-12_14h30.log
+```
+
+### Modo direto (terminal aberto)
+
+Se preferir acompanhar diretamente no terminal (não resiliente a desconexão):
+
+```bash
 nextflow run main.nf -profile a_leari
-# Ctrl+A, D para sair sem matar o processo
-# screen -r pipeline para voltar
 ```
 
 ---
