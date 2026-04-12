@@ -33,6 +33,14 @@ import shutil
 import sys
 from collections import OrderedDict
 
+
+def organism_to_seqid(organism):
+    """Convert organism name to a short sequence ID. e.g. 'Anodorhynchus leari' → 'A_leari'."""
+    parts = organism.strip().split()
+    if len(parts) >= 2:
+        return f"{parts[0][0]}_{parts[1]}"
+    return organism.replace(" ", "_")
+
 # ── Mapeamento de nomes MITOS2 → nomes padronizados ─────────────────────────
 
 CDS_GENES = {
@@ -204,8 +212,18 @@ def compile_summary(args):
     assembly  = args.assembly
 
     # ── 01. Genoma circularizado ─────────────────────────────────────────
+    seqid = organism_to_seqid(args.organism)
     out_assembly = os.path.join(outdir, "01_genome_assembly.fasta")
-    shutil.copy2(assembly, out_assembly)
+    # Replace Contig1 header with organism name
+    with open(assembly) as fin:
+        content = fin.read()
+    content = re.sub(
+        r">Contig\d+",
+        f">{args.organism} mitochondrion, complete genome",
+        content,
+    )
+    with open(out_assembly, "w") as fout:
+        fout.write(content)
     print(f"  [01] Genoma circularizado → {out_assembly}")
 
     # ── Parse saídas MITOS2 ──────────────────────────────────────────────
@@ -416,7 +434,11 @@ def compile_summary(args):
     # ── 10. Anotação GFF3 ────────────────────────────────────────────────
     if os.path.exists(gff_path):
         out_gff = os.path.join(outdir, "10_annotation.gff")
-        shutil.copy2(gff_path, out_gff)
+        with open(gff_path) as fin:
+            gff_content = fin.read()
+        gff_content = gff_content.replace("Contig1", seqid)
+        with open(out_gff, "w") as fout:
+            fout.write(gff_content)
         print(f"  [10] Anotação GFF3 → {out_gff}")
 
     # ── 11. Estruturas secundárias (SVGs) ────────────────────────────────
@@ -449,7 +471,11 @@ def compile_summary(args):
     geneorder_path = os.path.join(mitos_dir, "result.geneorder")
     if os.path.exists(geneorder_path):
         out_go = os.path.join(outdir, "13_gene_order.txt")
-        shutil.copy2(geneorder_path, out_go)
+        with open(geneorder_path) as fin:
+            go_content = fin.read()
+        go_content = go_content.replace("Contig1", seqid)
+        with open(out_go, "w") as fout:
+            fout.write(go_content)
         print(f"  [13] Ordem gênica → {out_go}")
 
     # ── 14. Plots de qualidade MITOS2 ────────────────────────────────────

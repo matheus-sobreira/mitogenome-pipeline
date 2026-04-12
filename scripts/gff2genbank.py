@@ -18,6 +18,14 @@ import argparse
 import os
 import re
 import sys
+
+
+def organism_to_seqid(organism):
+    """Convert organism name to a short sequence ID. e.g. 'Anodorhynchus leari' → 'A_leari'."""
+    parts = organism.strip().split()
+    if len(parts) >= 2:
+        return f"{parts[0][0]}_{parts[1]}"
+    return organism.replace(" ", "_")
 from collections import OrderedDict
 
 # ── Nomes padronizados para GenBank ──────────────────────────────────────────
@@ -265,12 +273,10 @@ def main():
 
     os.makedirs(args.outdir, exist_ok=True)
 
-    # Get seqid from FASTA if not provided
+    # Get seqid from organism name if not provided
     seqid = args.seqid
     if not seqid:
-        with open(args.fasta) as fh:
-            header = fh.readline().strip()
-            seqid = header.lstrip(">").split()[0]
+        seqid = organism_to_seqid(args.organism)
 
     # Parse GFF
     features = parse_gff(args.gff)

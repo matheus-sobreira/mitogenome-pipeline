@@ -88,6 +88,14 @@ COLOR_TRNA      = "#9C27B0"   # Roxo — tRNAs
 COLOR_RRNA      = "#795548"   # Marrom — rRNAs
 COLOR_DLOOP     = "#607D8B"   # Cinza — D-loop / control region
 
+def organism_to_seqid(organism):
+    """Convert organism name to a short sequence ID. e.g. 'Anodorhynchus leari' → 'A_leari'."""
+    parts = organism.strip().split()
+    if len(parts) >= 2:
+        return f"{parts[0][0]}_{parts[1]}"
+    return organism.replace(" ", "_")
+
+
 def get_cds_color(gene_symbol):
     """Return color based on gene function."""
     if gene_symbol.startswith("ND"):
@@ -389,9 +397,8 @@ def main():
     os.makedirs(args.outdir, exist_ok=True)
 
     # Read sequence
-    seqid, sequence = read_fasta(args.fasta)
-    if args.seqid:
-        seqid = args.seqid
+    _, sequence = read_fasta(args.fasta)
+    seqid = args.seqid if args.seqid else organism_to_seqid(args.organism)
 
     # Parse GFF
     gff_features = parse_gff(args.gff)
