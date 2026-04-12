@@ -425,11 +425,25 @@ def compile_summary(args):
 
     print(f"  [08] Anticódons tRNA → {out_anticodons}")
 
-    # ── 09. Mapa do genoma ───────────────────────────────────────────────
+    # ── 09. Mapa circular do genoma ──────────────────────────────────────
+    # Prioridade: mapa circular do generate_genbank.py (SVG+PDF)
+    # Fallback: mapa linear do MITOS2 (PNG)
+    circular_copied = False
+    if args.genbank_dir:
+        for ext in ("svg", "pdf"):
+            circ_src = os.path.join(args.genbank_dir, f"circular_map.{ext}")
+            if os.path.exists(circ_src):
+                out_circ = os.path.join(outdir, f"09_circular_map.{ext}")
+                shutil.copy2(circ_src, out_circ)
+                print(f"  [09] Mapa circular ({ext.upper()}) → {out_circ}")
+                circular_copied = True
     if os.path.exists(png_path):
-        out_map = os.path.join(outdir, "09_genome_map.png")
+        out_map = os.path.join(outdir, "09b_genome_map_linear.png")
         shutil.copy2(png_path, out_map)
-        print(f"  [09] Mapa do genoma → {out_map}")
+        if not circular_copied:
+            print(f"  [09] Mapa linear do genoma → {out_map}")
+        else:
+            print(f"  [09b] Mapa linear MITOS2 → {out_map}")
 
     # ── 10. Anotação GFF3 ────────────────────────────────────────────────
     if os.path.exists(gff_path):
@@ -456,16 +470,15 @@ def compile_summary(args):
         gb_dst = os.path.join(outdir, "genbank_submission")
         if os.path.exists(gb_dst):
             shutil.rmtree(gb_dst)
-        shutil.copytree(args.genbank_dir, gb_dst)
-        # Count specific file types for display
-        gbk_files = [f for f in os.listdir(args.genbank_dir) if f.endswith(".gbk")]
-        map_files = [f for f in os.listdir(args.genbank_dir)
-                     if f.startswith("circular_map.")]
+        os.makedirs(gb_dst, exist_ok=True)
+        # Copia apenas arquivos de submissão (.gbk, .tbl, .fsa) — sem mapas
+        for f in os.listdir(args.genbank_dir):
+            if f.endswith((".gbk", ".tbl", ".fsa")):
+                shutil.copy2(os.path.join(args.genbank_dir, f), gb_dst)
+        gbk_files = [f for f in os.listdir(gb_dst) if f.endswith(".gbk")]
         print(f"  [12] GenBank submission → {gb_dst}")
         if gbk_files:
             print(f"       GenBank Flat File: {', '.join(gbk_files)}")
-        if map_files:
-            print(f"       Mapa circular: {', '.join(map_files)}")
 
     # ── 13. Ordem gênica ─────────────────────────────────────────────────
     geneorder_path = os.path.join(mitos_dir, "result.geneorder")
