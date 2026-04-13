@@ -41,3 +41,7 @@ data/databases/
 .vscode/
 *.code-workspace
 docs/TCC_ATUALIZADO.md
+
+# ── LaTeX / TCC (apenas local, compilado via Overleaf) ───────────────────────
+latex/
+latex-overleaf.zip
