@@ -14,7 +14,7 @@
     section=TITLE,      % Seções primárias em maiúsculas
     english,            % Idioma secundário
     brazil,             % Idioma principal
-    draft               % REMOVER para PDF final (acelera compilação)
+    final               % Modo final com imagens embutidas
 ]{abntex2}
 
 % ---- Pacotes fundamentais ----
@@ -277,6 +277,7 @@
 \postextual
 
 % ---- REFERÊNCIAS ----
-\bibliography{references}
+% .bbl pré-compilado inline para evitar passada do bibtex no Overleaf
+\input{main.bbl}
 
 \end{document}
