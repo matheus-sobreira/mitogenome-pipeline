@@ -77,17 +77,17 @@ O pipeline integra sete etapas sequenciais automatizadas: (1) análise piloto de
 
 O presente trabalho está organizado em sete capítulos. Este primeiro capítulo apresentou a contextualização do tema, o problema de pesquisa, os objetivos, a justificativa e um breve resumo metodológico.
 
-O **Capítulo 2** reúne o referencial teórico, abordando os fundamentos da montagem *de novo* de genomas, as especificidades do DNA mitocondrial, a crise de reprodutibilidade em ciência computacional, a tecnologia de conteinerização com Docker e os sistemas de gerenciamento de workflows científicos.
+O Capítulo 2 reúne o referencial teórico, abordando os fundamentos da montagem *de novo* de genomas, as especificidades do DNA mitocondrial, a crise de reprodutibilidade em ciência computacional, a tecnologia de conteinerização com Docker e os sistemas de gerenciamento de workflows científicos.
 
-O **Capítulo 3** analisa os trabalhos relacionados, revisando as principais ferramentas disponíveis para montagem de organelas — MitoHiFi, MITObim, GetOrganelle, MToolBox e NOVOPlasty — e apresenta uma análise comparativa entre elas.
+O Capítulo 3 analisa os trabalhos relacionados, revisando as principais ferramentas disponíveis para montagem de organelas — MitoHiFi, MITObim, GetOrganelle, MToolBox e NOVOPlasty — e apresenta uma análise comparativa entre elas.
 
-O **Capítulo 4** detalha a metodologia, descrevendo o processo de desenvolvimento de software adotado, a visão geral e o fluxo de execução do pipeline, sua arquitetura modular, as ferramentas e tecnologias utilizadas, e cada uma das sete etapas da análise.
+O Capítulo 4 detalha a metodologia, descrevendo o processo de desenvolvimento de software adotado, a visão geral e o fluxo de execução do pipeline, sua arquitetura modular, as ferramentas e tecnologias utilizadas, e cada uma das sete etapas da análise.
 
-O **Capítulo 5** apresenta os resultados obtidos nas execuções do pipeline e a discussão, incluindo as métricas de montagem e anotação para ambas as espécies, a análise de desempenho computacional e uma avaliação da robustez da abordagem.
+O Capítulo 5 apresenta os resultados obtidos nas execuções do pipeline e a discussão, incluindo as métricas de montagem e anotação para ambas as espécies, a análise de desempenho computacional e uma avaliação da robustez da abordagem.
 
-O **Capítulo 6** é dedicado integralmente à arara-azul-de-lear, apresentando a caracterização detalhada de seu mitogenoma, a análise dos genes codificadores de proteínas, RNAs transportadores e ribossomais, a comparação com a espécie congênere *Anodorhynchus hyacinthinus* e as implicações dos resultados para a conservação da espécie.
+O Capítulo 6 é dedicado integralmente à arara-azul-de-lear, apresentando a caracterização detalhada de seu mitogenoma, a análise dos genes codificadores de proteínas, RNAs transportadores e ribossomais, a comparação com a espécie congênere *Anodorhynchus hyacinthinus* e as implicações dos resultados para a conservação da espécie.
 
-O **Capítulo 7** encerra o trabalho com as considerações finais, sintetizando as contribuições alcançadas e indicando perspectivas para trabalhos futuros.
+O Capítulo 7 encerra o trabalho com as considerações finais, sintetizando as contribuições alcançadas e indicando perspectivas para trabalhos futuros.
 
 ---
 
@@ -99,13 +99,17 @@ O presente capítulo reúne os fundamentos conceituais necessários para compree
 
 Em bioinformática, a **montagem de genomas** (*genome assembly*) consiste no processo computacional de reconstruir a sequência original de DNA a partir de fragmentos obtidos por tecnologias de Sequenciamento de Nova Geração (NGS). O conceito é análogo à reconstrução de um texto completo a partir de milhões de trechos sobrepostos — cada trecho sendo uma **leitura** (*read*), um fragmento curto de sequência gerado pelo sequenciador. O método mais amplamente utilizado para gerar esses fragmentos é o *shotgun sequencing*, no qual o DNA genômico é clivado aleatoriamente em milhões de pequenos pedaços que, posteriormente, são sequenciados. Essa estratégia garante alta **cobertura** do genoma — isto é, cada posição do DNA é representada por múltiplas leituras, tipicamente dezenas a centenas de vezes —, mas resulta em dados fragmentados que precisam ser cuidadosamente alinhados e sobrepostos para permitir a reconstrução da sequência completa (EKBLOM; WOLF, 2014). A complexidade computacional dessa tarefa motivou o desenvolvimento de algoritmos especializados, baseados em técnicas como grafos de De Bruijn — estrutura em que cada nó representa uma subsequência de $k$ nucleótidos consecutivos (denominada **k-mer**), e cada aresta representa sobreposições entre k-mers adjacentes — e estratégias de sobreposição-layout-consenso (MILLER; KOREN; SUTTON, 2010).
 
-> **[SUGESTÃO DE FIGURA]**: Diagrama ilustrativo do processo de *shotgun sequencing*, mostrando: (a) a clivagem aleatória do DNA genômico em fragmentos; (b) o sequenciamento dos fragmentos em leituras curtas; (c) a sobreposição e reconstrução da sequência original. Incluir indicação de cobertura.
+
+*[Aqui será inserida figura: processo de shotgun sequencing. Em elaboração.]*
+
 
 Na montagem genômica, fragmentos sobrepostos são inicialmente agrupados em **contigs** (*contiguous sequences* — sequências contínuas reconstruídas a partir do alinhamento de leituras sobrepostas, análogas a blocos de texto já montados). Quando existe informação adicional que permite inferir a ordem relativa entre diferentes contigs — como dados de **leituras pareadas** (*paired-end reads*: pares de leituras gerados a partir das duas extremidades do mesmo fragmento de DNA, com distância conhecida entre elas) —, esses podem ser organizados em estruturas mais amplas chamadas **scaffolds**. Assim, enquanto os contigs representam sequências consolidadas diretamente a partir das leituras, os scaffolds constituem hipóteses mais abrangentes sobre a organização genômica, servindo como passo intermediário até a obtenção de montagens completas e anotadas.
 
 As tecnologias de NGS diferem substancialmente no comprimento das leituras produzidas. Sequenciadores Illumina, por exemplo, geram leituras curtas de alta acurácia (50 a 300 pares de bases), que exigem algoritmos sofisticados para lidar com regiões repetitivas. Em contrapartida, tecnologias como PacBio e Oxford Nanopore produzem leituras longas, que podem alcançar milhares de pares de bases em uma única sequência, favorecendo a continuidade da montagem, ainda que a custos mais elevados e com menor rendimento global (EKBLOM; WOLF, 2014).
 
-> **[SUGESTÃO DE FIGURA]**: Tabela comparativa ou diagrama lado a lado das tecnologias de sequenciamento: Illumina (leituras curtas, 50–300 bp, alta acurácia, alto rendimento) vs PacBio HiFi (leituras longas, >10.000 bp, alta fidelidade, menor rendimento) vs Oxford Nanopore (leituras ultra-longas, >100.000 bp, menor acurácia). Incluir exemplos de aplicação para cada tecnologia.
+
+*[Aqui será inserida tabela: comparação entre tecnologias de sequenciamento (Illumina, PacBio, Nanopore). Em elaboração.]*
+
 
 O DNA mitocondrial (mtDNA) reúne um conjunto de particularidades que o tornam um alvo privilegiado para a montagem *de novo*. Antes de descrevê-las, convém definir conceitos fundamentais da biologia molecular que serão recorrentes ao longo deste trabalho.
 
@@ -113,14 +117,18 @@ Um **gene** é um trecho de DNA que contém as instruções para a síntese de u
 
 Em metazoários (animais multicelulares), o mtDNA corresponde a uma molécula **circular** de fita dupla — diferentemente dos **cromossomos** nucleares (estruturas lineares de DNA compactado localizadas no núcleo da célula, que carregam a maior parte da informação genética), que são lineares, o DNA mitocondrial forma um anel contínuo sem extremidades —, com tamanho geralmente entre 12 e 22 mil pares de bases, codificando 37 genes distribuídos em 13 proteínas associadas à **fosforilação oxidativa** (o conjunto de reações bioquímicas que a mitocôndria utiliza para produzir ATP, a molécula de energia da célula), 22 tRNAs e 2 rRNAs (ANDERSON et al., 1981; ASAKAWA et al., 1995; BOORE, 1999). O sequenciamento completo do genoma mitocondrial humano por Anderson et al. (1981) representou um marco histórico, estabelecendo o modelo de referência para a organização gênica mitocondrial dos metazoários.
 
-> **[SUGESTÃO DE FIGURA]**: Representação circular esquemática de um genoma mitocondrial típico de vertebrado, mostrando a distribuição dos 37 genes (13 CDS em cores por complexo respiratório, 22 tRNAs, 2 rRNAs), a região controle (D-loop), e as fitas pesada (H) e leve (L). Pode-se utilizar como base o mapa circular da arara-azul-de-lear gerado pelo pipeline (`09_circular_map.svg`) ou gerar uma versão de referência no OGDRAW.
+
+*[Aqui será inserida figura: genoma mitocondrial típico de vertebrado (mapa circular). Em elaboração.]*
+
 
 A ausência de **íntrons** (segmentos não codificantes que, nos genes nucleares, intercalam as regiões codificantes e precisam ser removidos antes da tradução), a estrutura compacta e a elevada taxa de cópias por célula tornam o mtDNA especialmente acessível, facilitando sua recuperação mesmo em experimentos voltados ao genoma nuclear, nos quais ele aparece como subproduto. Além disso, características funcionais como a herança predominantemente materna, a ausência geral de recombinação e a taxa evolutiva superior à do DNA nuclear ampliam sua utilidade em estudos biológicos. Essas propriedades explicam sua ampla aplicação em análises de genética de populações, **filogeografia** (estudo da distribuição geográfica de linhagens genéticas), sistemática e conservação da biodiversidade.
 
 
 Para explorar essas vantagens, foram desenvolvidos algoritmos específicos de montagem. Uma das abordagens mais empregadas é a *seed-and-extend* (semente-e-extensão), em que uma sequência inicial conhecida (*seed* — semente) — que pode ser um gene ou até mesmo um fragmento de organela de espécie próxima — serve como ponto de partida para estender iterativamente a montagem até que a molécula circular seja reconstruída. Quando as extremidades da sequência em construção se sobrepõem, confirmando que o genoma forma um anel contínuo, diz-se que a montagem foi **circularizada** — indicação de que o genoma mitocondrial completo foi recuperado com sucesso. O NOVOPlasty é um dos principais programas baseados nessa estratégia, destacando-se pela eficiência na recuperação de genomas mitocondriais e cloroplastidiais a partir de dados de genoma total (DIERCKXSENS; MARDULYN; SMITS, 2017). Avanços recentes, como o pipeline MitoHiFi, exploram leituras longas de alta fidelidade, evidenciando a constante evolução das ferramentas voltadas à montagem de organelas (ULIANO-SILVA et al., 2023).
 
-> **[SUGESTÃO DE FIGURA]**: Diagrama ilustrativo da estratégia *seed-and-extend*: (a) sequência semente (gene COX1 de espécie congênere); (b) extensão iterativa a partir das leituras que se sobrepõem à semente; (c) circularização quando as extremidades se encontram, formando a molécula circular completa. Indicar a direção de extensão e o momento da circularização.
+
+*[Aqui será inserida figura: estratégia seed-and-extend do NOVOPlasty. Em elaboração.]*
+
 
 Complementarmente à montagem, a **anotação funcional** dos genes mitocondriais permite identificar e classificar os elementos codificantes da molécula reconstruída — ou seja, determinar quais genes estão presentes, suas posições exatas e suas funções biológicas. Para metazoários, ferramentas como o MITOS2 combinam alinhamentos de homologia (comparações com genes conhecidos em bancos de dados) com modelos de covariância (Infernal) para predizer genes codificadores de proteínas, tRNAs e rRNAs, produzindo anotações em formatos padronizados como **GFF3** (*General Feature Format version 3* — formato tabular que especifica a localização e o tipo de cada gene no genoma) (DONATH et al., 2019). A integração da etapa de anotação em pipelines automatizados de montagem permanece, contudo, uma lacuna na maioria das soluções disponíveis na literatura. A ampla adoção do MITOS2 pela comunidade científica — empregado como ferramenta primária de anotação em estudos recentes abrangendo vertebrados (ZHAN et al., 2024; KUNDU et al., 2024), invertebrados terrestres (SHI et al., 2024; TAO et al., 2024) e invertebrados marinhos (WEI et al., 2024; ALBOASUD; JEONG; LEE, 2024) — atesta a confiabilidade de seus resultados e reforça a pertinência de sua integração em fluxos automatizados.
 
@@ -132,7 +140,9 @@ Contudo, a ciência moderna enfrenta o que tem sido amplamente denominado como u
 
 Pequenas variações na versão de uma ferramenta ou de uma biblioteca subjacente podem levar a resultados drasticamente diferentes, comprometendo a validade e a confiabilidade da pesquisa. Essa barreira técnica não apenas dificulta a verificação dos resultados, mas também impede a reutilização e a adaptação de métodos computacionais, contrariando os princípios FAIR (*Findable, Accessible, Interoperable, and Reusable*), que visam maximizar o valor dos dados e das análises científicas (SANDVE et al., 2013; WILKINSON et al., 2016; GRÜNING et al., 2018; BRITISH ECOLOGICAL SOCIETY, 2017).
 
-> **[SUGESTÃO DE FIGURA]**: Diagrama comparativo do "inferno de dependências" (*dependency hell*): à esquerda, instalação manual de um pipeline com conflitos entre versões de bibliotecas (setas cruzadas, erros); à direita, o mesmo pipeline containerizado com Docker (cada ferramenta em seu container isolado, sem conflitos). Destacar como o Docker resolve o problema.
+
+*[Aqui será inserida figura: dependency hell vs. containerização Docker. Em elaboração.]*
+
 
 ### 2.3 Tecnologia de Conteinerização com Docker
 
@@ -142,7 +152,9 @@ O funcionamento do Docker baseia-se em dois conceitos centrais: a imagem e o con
 
 Essa arquitetura garante que um software containerizado se comporte de maneira idêntica em qualquer ambiente que possua o Docker instalado - seja em computadores pessoais, servidores de produção ou ambientes de nuvem - resolvendo de forma eficaz o problema da inconsistência de ambientes e sendo um passo fundamental para a criação de pipelines científicos portáveis e reprodutíveis (DI TOMMASO et al., 2017).
 
-> **[SUGESTÃO DE FIGURA]**: Diagrama de camadas da arquitetura Docker: (a) Dockerfile (receita textual); (b) Imagem (template estático e imutável); (c) Container (instância em execução). Mostrar como um mesmo Dockerfile gera a mesma imagem em qualquer máquina. Comparar com a abordagem de máquina virtual (VM) para evidenciar a leveza dos containers.
+
+*[Aqui será inserida figura: arquitetura Docker (Dockerfile → Imagem → Container). Em elaboração.]*
+
 
 ### 2.4 Sistemas de Gerenciamento de Workflows Científicos
 
@@ -216,7 +228,9 @@ A Tabela a seguir sintetiza as características das ferramentas e pipelines anal
 
 A análise comparativa evidencia que, embora cada ferramenta contribua com inovações relevantes para domínios específicos, nenhuma oferece um fluxo integrado que cubra todas as etapas — desde a aquisição dos dados brutos até a geração de arquivos prontos para submissão ao GenBank — em um ambiente completamente containerizado e orquestrado. Adicionalmente, nenhuma das soluções analisadas incorpora mecanismos de redução automática do volume de dados (como o Pilot QC e o truncamento adaptativo), o que as torna dependentes de hardware com grande capacidade de armazenamento e memória. A proposta deste trabalho preenche essas lacunas ao combinar montagem, anotação funcional, geração de entregáveis, práticas de reprodutibilidade e acessibilidade computacional em um único pipeline modular, executável em computadores pessoais.
 
-> **[SUGESTÃO DE FIGURA]**: Gráfico radar (spider chart) comparando as 6 ferramentas/pipelines analisados em 5 eixos: (1) Completude do fluxo (montagem→anotação→GenBank), (2) Reprodutibilidade (containerização + workflow), (3) Acessibilidade computacional (execução em laptop), (4) Automação (Pilot QC + decisões condicionais), (5) Generalidade taxonômica. Cada ferramenta como uma linha colorida, evidenciando que o presente trabalho cobre todos os eixos.
+
+*[Aqui será inserida figura: gráfico radar comparativo entre ferramentas de montagem. Em elaboração.]*
+
 
 A análise dos trabalhos relacionados permitiu identificar diferentes abordagens para a montagem de organelas, incluindo pipelines baseados em leituras longas, estratégias iterativas e montadores especializados como o NOVOPlasty. Embora cada solução apresente contribuições relevantes, permanecem lacunas quanto à padronização, portabilidade, completude do fluxo analítico e reprodutibilidade. Nesse contexto, o Capítulo 4 descreve a metodologia adotada neste trabalho, detalhando a concepção do pipeline proposto e as ferramentas que o compõem.
 
@@ -237,7 +251,9 @@ O ciclo de desenvolvimento foi organizado em duas fases principais, cada uma con
 
 Cada fase produziu um pipeline funcional e independente. A Fase 1 foi preservada como branch separada no repositório Git (`fase1-montagem`), permitindo uso e validação independente por terceiros — uma prática de versionamento semântico que garante rastreabilidade e facilita a manutenção (SOMMERVILLE, 2016).
 
-> **[SUGESTÃO DE FIGURA — Fases do Desenvolvimento]**: Diagrama de fases do desenvolvimento do pipeline: Fase 1 (Montagem) e Fase 2 (Anotação), com indicação dos ciclos iterativos (desenvolvimento → teste → correção → validação). Mostrar a branch `fase1-montagem` como snapshot de segurança entre as fases, e as espécies utilizadas em cada ciclo (controle: *D. bifasciatus*; alvo: arara-azul-de-lear).
+
+*[Aqui será inserida figura: Fases do Desenvolvimento. Em elaboração.]*
+
 
 #### 4.1.1 Validação por Espécie-Controle
 
@@ -275,7 +291,8 @@ De forma geral, o pipeline é composto por sete macroetapas principais, organiza
 
 A quarta etapa corresponde à **montagem do mitogenoma**, realizada com o NOVOPlasty, ferramenta especializada que utiliza a estratégia seed-and-extend para reconstruir a molécula circular completa a partir de leituras curtas (DIERCKXSENS; MARDULYN; SMITS, 2017). A quinta etapa, de **anotação funcional**, identifica os genes do genoma montado, utilizando o MITOS2 (DONATH et al., 2019) para a predição de genes codificadores de proteínas, rRNAs e tRNAs, com geração de estruturas secundárias previstas via ViennaRNA (LORENZ et al., 2011). A sexta etapa consiste na **compilação dos entregáveis**, em que um script automatizado reúne todos os produtos da análise em uma pasta organizada, incluindo arquivos no formato GenBank Flat File para submissão ao NCBI. Por fim, a sétima etapa concentra-se na **automação e reprodutibilidade**, em que cada componente do pipeline é containerizado com Docker (MERKEL, 2014) e orquestrado via Nextflow (DI TOMMASO et al., 2017).
 
-> **[SUGESTÃO DE FIGURA — Visão Geral do Pipeline]**: Fluxograma com as 7 etapas do pipeline: Pilot QC → SRA Download → FastQC → Trim Galore → NOVOPlasty → MITOS2 → Compile Summary. Usar cores distintas para Fase 1 (montagem, tons de azul) e Fase 2 (anotação, tons de verde). Indicar em cada etapa: ferramenta utilizada, formato de entrada e formato de saída.
+
+*[Aqui será inserida figura: Visão Geral do Pipeline. Em elaboração.]*
 
 
 A visão geral do pipeline, representada em formato de fluxograma, ilustra o encadeamento das etapas e destacando a integração entre análise bioinformática e práticas de engenharia de software. Deve-se observar que a lógica condicional do pipeline permite que a etapa de anotação (MITOS2) seja executada apenas quando o banco de dados de referência estiver disponível, tornando a Fase 1 (montagem) independente da Fase 2 (anotação). Adicionalmente, o workflow aplica um **filtro de circularização**: apenas montagens cujo nome de arquivo inicia com `Circularized_assembly` são encaminhadas ao MITOS2 e à compilação de entregáveis. Quando o NOVOPlasty não obtém circularização (produzindo apenas contigs parciais), a anotação é automaticamente omitida, evitando análises sobre montagens incompletas que poderiam gerar resultados biologicamente incorretos. Essa decisão de design garante que os entregáveis finais representem exclusivamente genomas mitocondriais completos e circulares.
@@ -312,11 +329,9 @@ nextflow run main.nf -profile <espécie> -resume -w work/<espécie>/<timestamp>
 
 A Figura a seguir ilustra o caminho dos dados através do pipeline, incluindo os pontos de decisão automática.
 
-> **[SUGESTÃO DE FIGURA — Diagrama de Fluxo de Dados]**: Criar diagrama mostrando o fluxo sequencial com os formatos de dados em cada transição:
->
-> `.sra` (11 GB) → **SRA_DOWNLOAD** → `.fastq` paired-end (43,5 GB × 2) → truncagem `head` → `.fastq` (7,4 GB × 2) → **FASTQC** → `.html` (relatórios) → **TRIM_GALORE** → `.fq` trimados (5,3 GB × 2) → **NOVOPLASTY** → `.fasta` circularizado (17 KB) → **MITOS2** → `.gff` + `.faa` + `.svg` → **COMPILE_SUMMARY** → `summary/` (14 entregáveis)
->
-> Destacar visualmente a redução de 87 GB → 17 KB (fator de redução de 5.000.000×) e os dois pontos de decisão: (1) Pilot QC e (2) Filtro de Circularização.
+
+*[Aqui será inserida figura: Diagrama de Fluxo de Dados. Em elaboração.]*
+
 
 O pipeline incorpora dois pontos de decisão automática que não requerem intervenção do usuário:
 
@@ -324,28 +339,9 @@ O pipeline incorpora dois pontos de decisão automática que não requerem inter
 
 **Decisão 2 — Filtro de Circularização (qualidade da montagem).** Após a montagem pelo NOVOPlasty, apenas arquivos cujo nome corresponde ao padrão `Circularized_assembly_*` são encaminhados ao MITOS2. Montagens parciais (contigs não circularizados) são automaticamente descartados do fluxo de anotação, evitando que genomas incompletos recebam anotações potencialmente incorretas (e.g., genes truncados nas extremidades de contigs lineares). O pipeline reporta essas montagens parciais no log para que o pesquisador possa investigar manualmente a causa da não-circularização (cobertura insuficiente, semente inadequada, ou regiões repetitivas complexas).
 
-> **[SUGESTÃO DE FIGURA — Diagrama de Decisão]**: Criar diagrama de atividade (estilo UML) ou fluxograma mostrando os dois pontos de decisão:
->
-> ```
-> INÍCIO
->   ↓
-> sra_max_reads definido? ─── Sim ──→ SRA_DOWNLOAD (valor do usuário)
->   │ Não                                    ↓
->   ↓                                     FASTQC
-> SRA_PILOT (500K reads)                     ↓
->   ↓                                  TRIM_GALORE
-> Calcula max_reads                          ↓
->   ↓                                   NOVOPLASTY
-> SRA_DOWNLOAD (valor calculado)             ↓
->   ↓                              Circularizou? ─── Não ──→ Log (aviso)
-> [merge no fluxo principal]           │ Sim                     │
->                                      ↓                        FIM
->                                    MITOS2
->                                      ↓
->                               COMPILE_SUMMARY
->                                      ↓
->                                    FIM
-> ```
+
+*[Aqui será inserida figura: Diagrama de Decisão. Em elaboração.]*
+
 
 #### 4.3.4 Extensibilidade para Novas Espécies
 
@@ -364,7 +360,9 @@ Essa arquitetura extensível é demonstrada pelas sete sementes incluídas no re
 
 A organização do código segue a convenção de projetos Nextflow DSL2, em que cada etapa do pipeline corresponde a um **módulo** independente (arquivo `.nf` no diretório `modules/`), e os scripts auxiliares residem no diretório `scripts/`. Essa separação permite que cada componente seja desenvolvido, testado e mantido de forma isolada. A Tabela 2 apresenta a relação completa dos módulos, scripts e suas responsabilidades.
 
-> **[SUGESTÃO DE TABELA — Tabela 2]**: Inserir tabela com a arquitetura modular:
+
+*[Aqui será inserida tabela: arquitetura modular do pipeline. Em elaboração.]*
+
 
 | Arquivo | Tipo | Função |
 |---|---|---|
@@ -389,7 +387,9 @@ A implementação de um pipeline bioinformático demanda não apenas a escolha d
 
 Um aspecto central da engenharia deste pipeline é o **pinamento de versões**. Todas as ferramentas foram encapsuladas em containers Docker com versões explicitamente fixadas, tanto para as imagens base quanto para os softwares instalados. Essa decisão, embora impeça o uso automático de atualizações, garante que o pipeline produza resultados idênticos independentemente do momento ou do ambiente em que for executado, eliminando uma das principais fontes de irreprodutibilidade em bioinformática. A Tabela 1 apresenta as versões de cada componente utilizado.
 
-> **[SUGESTÃO DE TABELA — Tabela 1]**: Inserir tabela com as versões pinadas:
+
+*[Aqui será inserida tabela: versões pinadas das ferramentas. Em elaboração.]*
+
 
 | Componente | Versão | Imagem base |
 |---|---|---|
@@ -531,7 +531,9 @@ Onde $C_{alvo}$ é a cobertura desejada, $G$ é o tamanho médio esperado do gen
 
 Caso o usuário opte por definir manualmente o `sra_max_reads` via parâmetro de linha de comando, a etapa Pilot QC é automaticamente pulada, preservando a flexibilidade para cenários em que o pesquisador já possui conhecimento prévio sobre seus dados.
 
-> **[SUGESTÃO DE FIGURA — Fluxograma do Pilot QC]**: Fluxograma de decisão do Pilot QC mostrando: entrada (500K reads) → análise de Q30% → análise de adaptadores → estimativa da fração mitocondrial → cálculo do `max_reads` → caps (mín 5M, máx 25M). Incluir exemplo numérico com dados reais da arara-azul-de-lear (Q30=86,2%, adaptadores=66,4%, fração mito=0,10%, recomendação=25M).
+
+*[Aqui será inserida figura: Fluxograma do Pilot QC. Em elaboração.]*
+
 
 ### 4.8 Controle de Qualidade e Pré-processamento
 
@@ -553,7 +555,9 @@ No pipeline implementado, o módulo NOVOPlasty incorpora diversas melhorias em r
 
 A seleção dos valores de k-mer segue as recomendações do próprio NOVOPlasty (DIERCKXSENS; MARDULYN; SMITS, 2017), que aceita valores ímpares no intervalo de 21 a 39. Valores maiores de k-mer (como 39) favorecem a **especificidade** da montagem — cada k-mer é mais longo e, portanto, menos ambíguo, reduzindo o risco de quimeras e extensões incorretas. Por outro lado, valores menores (como 33) aumentam a **sensibilidade**, permitindo extensões em regiões de menor cobertura ou maior divergência entre a semente e o genoma-alvo. Assim, a estratégia adotada neste pipeline inicia pelo valor máximo (39), que produz montagens mais confiáveis quando a cobertura e a qualidade dos dados são adequadas, e recorre ao valor menor (33) apenas se a circularização não for alcançada na primeira tentativa. Para a arara-azul-de-lear, a circularização ocorreu na primeira tentativa com k-mer 39, indicando que a cobertura de 306× e a qualidade do HiSeq X Ten foram suficientes para o valor mais restritivo. Já para *D. bifasciatus*, a circularização ocorreu com k-mer 33, possivelmente refletindo diferenças na cobertura ou na composição nucleotídica do dataset.
 
-> **[SUGESTÃO DE FIGURA — Estratégia de k-mers Múltiplos]**: Diagrama ilustrativo mostrando: (a) tentativa com k=39 (alta especificidade, menos quimeras) → circularização bem-sucedida para arara-azul-de-lear (306×); (b) fallback para k=33 (maior sensibilidade) → circularização de *D. bifasciatus* (cobertura menor). Usar setas indicando a lógica top-down: tenta o maior primeiro, recorre ao menor apenas se necessário.
+
+*[Aqui será inserida figura: Estratégia de k-mers Múltiplos. Em elaboração.]*
+
 
 **Obtenção da semente (seed).** O NOVOPlasty requer uma sequência inicial conhecida para ancorar a extensão. A estratégia adotada neste trabalho consiste em: (i) identificar no NCBI uma espécie congênere ou filogeneticamente próxima que possua mitogenoma completo depositado; (ii) extrair o gene cox1 dessa referência, por ser o marcador mitocondrial mais conservado e amplamente disponível; e (iii) salvar a região em formato FASTA. Para a arara-azul-de-lear, foi utilizado o gene cox1 de *A. hyacinthinus* (NC_082165.1, posições 5359–6906, 1.548 bp), espécie congênere cuja proximidade filogenética garante homologia suficiente para o seed-and-extend funcionar eficazmente. Para *D. bifasciatus*, foi utilizado o próprio cox1 da referência publicada (PZ143763.1, 1.560 bp). O repositório do pipeline inclui um guia detalhado para obtenção de sementes (`data/seeds/COMO_OBTER_SEMENTE.md`) e exemplos para sete espécies de diferentes grupos taxonômicos.
 
@@ -606,7 +610,8 @@ Para atingir esse objetivo, cada etapa do pipeline foi encapsulada em containers
 
 Todo o código-fonte do workflow está disponibilizado em repositório público no GitHub (https://github.com/matheus-sobreira/mitogenome-pipeline), acompanhado de documentação detalhada, guia de execução e exemplos de uso. Essa prática de ciência aberta não apenas reforça a transparência metodológica, mas também incentiva a adaptação e o aprimoramento do pipeline por outros pesquisadores, em consonância com iniciativas comunitárias como o nf-core (EWELS et al., 2020).
 
-> **[SUGESTÃO DE FIGURA — Arquitetura de Reprodutibilidade]**: Diagrama de três camadas mostrando: (1) Camada de código — GitHub (módulos `.nf`, scripts `.py/.sh`, configurações); (2) Camada de ambiente — Docker (5 imagens com versões pinadas); (3) Camada de orquestração — Nextflow DSL2 (`-resume`, perfis, paralelização). Indicar como cada camada contribui para a reprodutibilidade do pipeline.
+
+*[Aqui será inserida figura: Arquitetura de Reprodutibilidade. Em elaboração.]*
 
 
 ---
@@ -636,7 +641,9 @@ O pipeline foi executado para duas espécies, com objetivos complementares:
 
 Para a arara-azul-de-lear, o download via `prefetch` obteve o arquivo `.sra` de 11 GB, que foi convertido pelo `fasterq-dump` em dois arquivos FASTQ de aproximadamente 43,5 GB cada (R1 e R2). Após a truncagem para 20 milhões de leituras, os arquivos foram reduzidos para ~7,4 GB cada, representando uma economia de 83% em volume de dados processados sem qualquer prejuízo à montagem, dada a redundância intrínseca dos dados de genoma total.
 
-> **[SUGESTÃO DE FIGURA]**: Inserir aqui o gráfico `pipeline_data_reduction.png`, já gerado, mostrando a redução de volume em cada etapa do pipeline. Legendar como "Figura X — Redução do volume de dados ao longo das etapas do pipeline para a arara-azul-de-lear. Painel esquerdo: tamanho dos arquivos por etapa. Painel direito: composição de bases após trimming."
+
+*[Aqui será inserida figura: gráfico de redução de dados do pipeline. Em elaboração.]*
+
 
 Para *D. bifasciatus*, o dataset compacto (12M reads, ~1,2 GB) foi processado integralmente sem necessidade de truncagem, utilizando como semente o gene cox1 da própria referência publicada (PZ143763.1, 1.560 bp) e `genome_range` de 15.000–18.500 bp.
 
@@ -644,7 +651,9 @@ Para *D. bifasciatus*, o dataset compacto (12M reads, ~1,2 GB) foi processado in
 
 Os relatórios do FastQC para a arara-azul-de-lear indicaram qualidade per-base consistente (medianas superiores a Phred 30 ao longo de toda a extensão das leituras), padrão esperado para dados HiSeq X Ten. O Trim Galore identificou adaptadores Illumina TruSeq em 81,4% das leituras e, após o trimming, manteve 71,9% das bases originais. Esse percentual elevado de adaptador é atribuído ao tamanho curto dos insertos da biblioteca, característico de preparações para HiSeq X Ten, em que os fragmentos frequentemente ultrapassam o comprimento das leituras.
 
-> **[SUGESTÃO DE FIGURA]**: Capturas de tela dos relatórios FastQC (antes e depois do trimming), mostrando a qualidade per-base e o conteúdo de adaptadores. Sugestão: montar como figura composta (2×2) com R1 antes, R1 depois, R2 antes, R2 depois.
+
+*[Aqui será inserida figura: relatórios FastQC antes e depois do trimming. Em elaboração.]*
+
 
 ### 5.4 Montagem do Mitogenoma
 
@@ -668,7 +677,9 @@ A proporção de leituras mitocondriais de 0,17% é condizente com a estimativa 
 
 O log do NOVOPlasty reportou uma fração de subamostragem (*subsampled fraction*) de 61,9%, indicando que o algoritmo processou 61,9% das leituras de entrada antes de obter a circularização. Esse valor reflete a eficiência do seed-and-extend: como o NOVOPlasty constrói o genoma iterativamente a partir da semente, ele pode alcançar a montagem completa sem necessidade de processar todas as leituras disponíveis, resultando em economia computacional proporcional à fração não processada.
 
-> **[SUGESTÃO DE FIGURA]**: Inserir aqui uma representação do genoma circularizado montado. Pode ser o mapa circular gerado pelo Biopython (09_circular_map.svg/pdf) ou um mapa gerado no OGDRAW a partir do arquivo .gbk produzido pelo pipeline.
+
+*[Aqui será inserida figura: mapa circular do genoma montado (NOVOPlasty/Biopython). Em elaboração.]*
+
 
 ### 5.5 Anotação Funcional
 
@@ -693,13 +704,9 @@ CDS   join(9504..9677,9679..9854)
 
 Para a conversão dos resultados ao formato GenBank Flat File, o script `gff2genbank.py` do pipeline detecta automaticamente a presença de nad3_0 e nad3_1 e os unifica em um único CDS com `join()`, aplicando o qualificador `/exception=ribosomal slippage` — exatamente como exigido pelo GenBank para submissão. Quando a espécie não apresenta esse frameshift (e.g., invertebrados), o ND3 é anotado normalmente como um CDS contínuo.
 
-> **[SUGESTÃO DE FIGURA]**: Inserir a tabela de posição física dos genes (06_gene_positions.tsv), similar à tabela do PDF de referência da disciplina, com colunas Region, Start, Stop, Strand, Length.
 
-> **[SUGESTÃO DE FIGURA]**: Inserir uma ou mais imagens dos SVGs de estrutura secundária dos tRNAs gerados pelo pipeline (e.g., tRNA-Phe, tRNA-Ile, tRNA-Met, tRNA-Trp), agrupando 4 diagramas por figura.
+*[Aqui será inserida tabela: posição física dos genes no mitogenoma. Em elaboração.]*
 
-> **[SUGESTÃO DE TABELA]**: Tabela com Start/Stop codons dos CDS, similar à do PDF de referência.
-
-> **[SUGESTÃO DE TABELA]**: Tabela com anticódons dos tRNAs.
 
 ### 5.6 Compilação dos Entregáveis e Formato GenBank
 
@@ -748,7 +755,9 @@ A execução foi realizada em um laptop com processador Intel Core i7-1165G7 (4 
 | MITOS2 | 4,1 | 7,2% | 1033% | 0,41 | 222 MB | 45 MB |
 | **Total** | **56,7** | **100%** | — | — | — | — |
 
-> [SUGESTÃO DE FIGURA: Gráfico de barras horizontais mostrando o tempo de cada etapa (empilhado por tipo: I/O-bound vs CPU-bound), com anotação da porcentagem]
+
+*[Aqui será inserida figura: tempo de execução por etapa do pipeline. Em elaboração.]*
+
 
 #### 5.7.1 Gargalo de I/O: Download e Conversão SRA
 
@@ -788,7 +797,9 @@ Uma análise particularmente reveladora é a redução progressiva do volume de 
 
 O dado original (87 GB de FASTQ bruto) é reduzido em mais de **cinco milhões de vezes** até a montagem final (17 KB). Essa cascata demonstra que a maior parte do sequenciamento WGS é irrelevante para o genoma mitocondrial — apenas 0,17% das reads alinham ao mitogenoma. A existência do Pilot QC como primeira etapa evita o download desnecessário: em vez de baixar os 87 GB completos, o pipeline determina automaticamente que 50M reads (~42 GB) são suficientes.
 
-> [SUGESTÃO DE FIGURA: Gráfico de funil ou barras decrescentes mostrando a cascata de redução de dados (87 GB → 42 GB → 10,8 GB → 17 KB → 1,6 MB summary), com a porcentagem de redução em cada transição]
+
+*[Aqui será inserida figura: cascata de redução de dados (87 GB → 17 KB). Em elaboração.]*
+
 
 #### 5.7.5 Pico de Armazenamento e Custo Computacional
 
@@ -827,7 +838,9 @@ O pipeline resolve esse problema por meio de uma cadeia de reduções progressiv
 
 Essa cadeia de decisões é o que torna possível executar o ciclo completo — do dado bruto público ao mitogenoma anotado com 14 categorias de entregáveis — em aproximadamente 35 minutos, em um notebook com 4 núcleos e 16 GB de RAM, sem necessidade de infraestrutura especializada. A viabilidade em hardware doméstico é particularmente relevante para estudantes de graduação e pesquisadores em instituições com recursos computacionais limitados, que de outra forma dependeriam de acesso a servidores ou clusters para realizar análises genômicas.
 
-> **[SUGESTÃO DE FIGURA]:** Gráfico de barras horizontais agrupando as 7 etapas do pipeline pelo percentual de tempo consumido, com anotações indicando a natureza de cada gargalo (I/O, CPU, rede). Destacar visualmente a desproporção entre o tempo de download (59,6%) e o tempo de montagem (8,0%).
+
+*[Aqui será inserida figura: percentual de tempo por etapa e natureza do gargalo. Em elaboração.]*
+
 
 ### 5.8 Discussão sobre a Robustez da Abordagem
 
@@ -861,9 +874,11 @@ As principais ameaças à espécie incluem: (i) o tráfico ilegal de filhotes pa
 
 Nesse contexto, a disponibilização de dados genômicos de alta qualidade torna-se uma ferramenta estratégica para a conservação. A genômica de conservação utiliza dados moleculares para subsidiar decisões de manejo, como a avaliação da diversidade genética remanescente, a identificação de unidades evolutivamente significativas e o desenvolvimento de marcadores para identificação forense de espécimes apreendidos do tráfico. O sequenciamento do genoma mitocondrial completo da arara-azul-de-lear representa uma contribuição direta para esse campo.
 
-> **[SUGESTÃO DE FIGURA — Distribuição Geográfica]**: Mapa da distribuição geográfica da arara-azul-de-lear no nordeste da Bahia (Raso da Catarina, Boqueirão da Onça, região de Canudos). Indicar os paredões de arenito de nidificação e as áreas de ocorrência do licuri (*Syagrus coronata*). Pode-se basear nos mapas do PAN ICMBio (2022) com devida atribuição.
 
-> **[SUGESTÃO DE FIGURA — Fotografia da Espécie]**: Fotografia da arara-azul-de-lear em ambiente natural, evidenciando a plumagem azul-cobalto diagnóstica e a mancha perioftálmica amarela que a distingue de *A. hyacinthinus*. Fonte sugerida: acervo ICMBio ou Wikimedia Commons (licença CC).
+*[Aqui será inserida figura: distribuição geográfica da arara-azul-de-lear. Em elaboração.]*
+
+*[Aqui será inserida figura: fotografia da espécie em ambiente natural. Em elaboração.]*
+
 
 ### 6.2 Caracterização Geral do Mitogenoma
 
@@ -894,7 +909,9 @@ O conteúdo gênico completo é composto por:
 
 A **região controle**, também chamada **D-loop** (do inglês *displacement loop*), é o único segmento não codificante significativo do mitogenoma. Embora não codifique genes, essa região é essencial porque contém as sequências promotoras que controlam o início da replicação do DNA mitocondrial e da transcrição dos genes. A D-loop é também a região com maior taxa de variação entre indivíduos da mesma espécie, o que a torna um marcador particularmente útil para estudos de diversidade genética intrapopulacional. |
 
-> **[SUGESTÃO DE FIGURA]**: Mapa circular do mitogenoma da arara-azul-de-lear, mostrando a posição e direção de transcrição de todos os genes. Genes codificadores na trilha externa, tRNAs e rRNAs na trilha intermediária, conteúdo GC na trilha interna. Utilizar `09_circular_map.svg` ou gerar versão de publicação no OGDRAW com o arquivo `A_leari.gbk`.
+
+*[Aqui será inserida figura: mapa circular do mitogenoma da arara-azul-de-lear. Em elaboração.]*
+
 
 ### 6.3 Genes Codificadores de Proteínas
 
@@ -950,7 +967,9 @@ O achado mais notável da anotação do mitogenoma da arara-azul-de-lear é a pr
 
 (ii) *Edição pós-transcricional do mRNA.* Neste modelo alternativo, o nucleotídeo extra é removido do mRNA por um mecanismo de edição de RNA antes da tradução, restaurando o quadro de leitura contínuo. Evidências de edição de RNA mitocondrial em plantas e protistas são abundantes, mas sua ocorrência em mitocôndrias de vertebrados é mais limitada. Estudos com cDNA de ND3 em tartarugas sugeriram que ao menos parte dos transcritos pode ser editada (RUSSELL; BECKENBACH, 2008), embora a questão permaneça em aberto. É possível, inclusive, que ambos os mecanismos coexistam: parte dos transcritos sendo editados e parte sendo traduzidos via frameshifting, em um sistema de redundância funcional.
 
-> **[SUGESTÃO DE FIGURA]**: Diagrama esquemático do frameshift do ND3, mostrando: (a) a posição da inserção do nucleotídeo extra após a posição 174; (b) os dois ORFs resultantes (nad3_0 e nad3_1); (c) o mecanismo de +1 PRF (deslizamento ribossomal) versus edição de RNA. Comparar com o modelo de −1 PRF viral para evidenciar as diferenças.
+
+*[Aqui será inserida figura: frameshift do ND3 (+1 PRF vs. edição de RNA). Em elaboração.]*
+
 
 **Distribuição taxonômica e significado evolutivo.** O frameshift do ND3 não é um artefato nem uma peculiaridade restrita a psitacídeos: trata-se de uma característica compartilhada por toda a classe Aves (todas as ordens investigadas), pela ordem Testudines (tartarugas e cágados) e pela ordem Crocodylia (crocodilos e jacarés) (MINDELL; SORENSON; DIMCHEFF, 1998). Notavelmente, o frameshift está **ausente** em mamíferos, anfíbios e na maioria dos peixes. Essa distribuição filogenética mapeia-se precisamente ao clado **Archelosauria** (Aves + Crocodylia + Testudines), sugerindo que a inserção do nucleotídeo extra ocorreu uma única vez no ancestral comum desses grupos, há aproximadamente 250 milhões de anos, no início do Mesozoico — e foi mantida por seleção purificadora desde então. A conservação de um frameshift por um período tão extenso de tempo evolutivo, atravessando centenas de milhões de gerações sem ser eliminado por seleção natural, constitui uma forte evidência de que o mecanismo de correção (seja por frameshifting ribossomal, edição de RNA ou ambos) é altamente eficiente e funcionalmente indispensável.
 
@@ -993,7 +1012,9 @@ A tabela a seguir apresenta as características de cada tRNA, incluindo seu tama
 
 Os tamanhos dos tRNAs variam de 65 bp (tRNA-Ser(AGY)) a 75 bp (tRNA-Ser(UCN)), com tamanho médio de 69 bp — dentro do intervalo típico de 60–80 bp observado em mitogenomas aviários. As estruturas secundárias dos 22 tRNAs foram preditas computacionalmente utilizando o programa RNAplot do pacote ViennaRNA (LORENZ et al., 2011), a partir dos modelos de covariância do MITOS2. Todos os tRNAs apresentaram a **estrutura canônica em trevo** (*cloverleaf*) — a conformação tridimensional característica dos tRNAs, em que a molécula se dobra sobre si mesma formando quatro "braços" que lembram uma folha de trevo: o braço aceptor (onde o aminoácido se liga), o braço do anticódon (que reconhece o códon do mRNA), o braço TΨC (envolvido na ligação ao ribossomo) e o **braço DHU** (nomeado pela presença de diidrouridina, um nucleotídeo modificado, e envolvido na estabilidade estrutural). O tRNA-Ser(AGY) constitui a exceção: carece do braço DHU, adotando uma estrutura simplificada em forma de "D". Essa anomalia estrutural não é uma peculiaridade da arara-azul-de-lear nem das aves em geral: trata-se de uma característica conservada em **virtualmente todos os metazoários** e considerada um relícto evolutivo ancestral mantido desde a origem dos animais multicelulares (BOORE, 1999). Nos 15 artigos analisados neste trabalho, abrangendo táxons tão diversos quanto corais hexacorálios (WEI et al., 2024), moluscos bivalves (LI et al., 2023; KARTAVTSEV; MASALKOVA, 2024), estrelas-do-mar (ALBOASUD; JEONG; LEE, 2024), afídeos (SHI et al., 2024), ramshorn snails (TAO et al., 2024), tubarões (YE et al., 2024), arraias (GUERREIRO et al., 2025), lagartos (ZHAN et al., 2024), anfíbios (HONG et al., 2024) e peixes teléosteos (KUNDU et al., 2024), **todos** reportam a ausência do braço DHU especificamente no tRNA-Ser(AGY). Essa conservação por mais de 600 milhões de anos, atravessando todas as grandes divisões do reino animal, indica que o tRNA-Ser(AGY) sem braço DHU não é disfuncional — pelo contrário, a estrutura simplificada em "D" é reconhecida pelo ribossomo mitocondrial de modo alternativo, possivelmente envolvendo interações compensatórias com outros componentes da maquinaria de tradução. A presença desse padrão no mitogenoma da arara-azul-de-lear, portanto, corrobora a integridade da anotação realizada pelo pipeline.
 
-> **[SUGESTÃO DE FIGURA]**: Painel 4×6 com as estruturas secundárias em trevo dos 22 tRNAs + 2 rRNAs, geradas em formato SVG. Utilizar os arquivos da pasta `structure_svgs/tRNA/` e `structure_svgs/rRNA/`. Destacar o tRNA-Ser(AGY) como o único sem braço DHU.
+
+*[Aqui será inserida figura: estruturas secundárias dos 22 tRNAs e 2 rRNAs (SVGs). Em elaboração.]*
+
 
 Os dois genes de rRNA — 12S rRNA (rrnS, 970 bp) e 16S rRNA (rrnL, 1.572 bp) — estão localizados entre o tRNA-Phe e o tRNA-Leu(UUR), separados pelo tRNA-Val. Essa organização é inalterada em todos os Psittaciformes sequenciados até o momento. Os rRNAs mitocondriais compõem os ribossomos mitocondriais (55S, formados por subunidade 28S com 12S rRNA e subunidade 39S com 16S rRNA), responsáveis pela tradução dos 13 mRNAs mitocondriais em proteínas dentro da organela.
 
@@ -1031,7 +1052,9 @@ Essa elevada similaridade tem implicações práticas para a conservação. A li
 
 **Região controle (D-loop) como marcador diferencial.** A região controle é o segmento do mitogenoma com maior taxa de variação interespecífica e intraespecífica. Estudos recentes confirmam esse padrão de forma consistente: em tubarões *Scoliodon*, a D-loop apresenta a maior variabilidade entre todas as regiões do mitogenoma (YE et al., 2024); em arraias *Potamotrygon*, a região controle contém repetições em tandem específicas da espécie (GUERREIRO et al., 2025); em afídeos, o comprimento da D-loop varia geograficamente dentro da mesma espécie, de 650 a 1.109 bp, refletindo diferenças no número de cópias de repetições em tandem (SHI et al., 2024). A comparação detalhada da região controle entre *A. leari* e *A. hyacinthinus* — incluindo a identificação de domínios conservados centrais (CCDs), blocos de sequência conservados (CSBs) e repetições em tandem específicas — constitui uma perspectiva futura estratégica para o desenvolvimento de marcadores diagnósticos de alta resolução para identificação forense das duas espécies. A disponibilidade de mitogenomas completos de ambas permite identificar regiões com maior variabilidade (como a região controle/D-loop) que podem servir como marcadores diagnósticos mais informativos.
 
-> **[SUGESTÃO DE FIGURA — Diagrama de Sintenia]**: Diagrama de colinearidade comparando a ordem gênica dos mitogenomas de *A. leari* e *A. hyacinthinus*, com linhas conectoras gene-a-gene mostrando a correspondência total. Evidenciar a conservação completa da ordem gênica (sintatênia) entre as duas espécies. Formato similar ao gráfico de sintenia do PDF de referência da disciplina.
+
+*[Aqui será inserida figura: Diagrama de Sintenia. Em elaboração.]*
+
 
 ### 6.6 Implicações para a Conservação
 
@@ -1066,7 +1089,9 @@ A disponibilização pública desses dados e do pipeline em repositório GitHub 
 
 ## Capítulo 7 — Considerações Finais
 
-> **[SUGESTÃO DE FIGURA — Infográfico-Resumo]**: Infográfico de uma página sintetizando o TCC: (1) o problema (87 GB de dados brutos, inacessível em laptop sem tratamento); (2) as 7 etapas do pipeline com ícones representativos; (3) o resultado (16.986 bp circularizado, 37 genes, GenBank-ready); (4) as 6 contribuições originais (Pilot QC, cadeia de reduções, re-seeding, SVGs, GenBank Flat File, 14 entregáveis). Útil como lâmina de apoio na apresentação de defesa.
+
+*[Aqui será inserida figura: Infográfico-Resumo. Em elaboração.]*
+
 
 O presente trabalho teve como objetivo propor e implementar um pipeline de bioinformática voltado à montagem e anotação funcional de genomas mitocondriais, concebido segundo princípios de automação, reprodutibilidade, ciência aberta e acessibilidade computacional. A integração de sete ferramentas consolidadas — SRA-Toolkit, FastQC, Trim Galore com Cutadapt, NOVOPlasty, MITOS2, ViennaRNA e Biopython (COCK et al., 2009) — em um fluxo containerizado (Docker) e orquestrado por meio do Nextflow constitui a principal contribuição metodológica desta proposta, ao oferecer uma solução transparente, portável e replicável para análises genômicas.
 
@@ -1086,6 +1111,8 @@ Em síntese, o pipeline desenvolvido representa uma contribuição metodológica
 
 ## 8. Referências
 
+ALBOASUD, M.; JEONG, H.; LEE, T. Complete Mitochondrial Genomes and Phylogenetic Analysis of Genus *Henricia* (Asteroidea: Spinulosida: Echinasteridae). *International Journal of Molecular Sciences*, v. 25, art. 5575, 2024. DOI: 10.3390/ijms25115575.
+
 ANDERSON, S. et al. Sequence and organization of the human mitochondrial genome. Nature, v. 290, p. 457-465, 1981.
 
 ANDREWS, S. FastQC: a quality control tool for high throughput sequence data. 2010. Disponível em: https://www.bioinformatics.babraham.ac.uk/projects/fastqc/. Acesso em: 31 ago. 2025.
@@ -1104,12 +1131,11 @@ BRIERLEY, I. Ribosomal frameshifting on viral RNAs. Journal of General Virology,
 
 BRITISH ECOLOGICAL SOCIETY. A guide to reproducible code in ecology and evolution. London: British Ecological Society, 2017.
 
-
 COCK, P. J. A. et al. Biopython: freely available Python tools for computational molecular biology and bioinformatics. Bioinformatics, v. 25, n. 11, p. 1422-1423, 2009. DOI: 10.1093/bioinformatics/btp163.
 
-DIERCKXSENS, N.; MARDULYN, P.; SMITS, G. NOVOPlasty: de novo assembly of organelle genomes from whole genome data. Nucleic Acids Research, v. 45, n. 4, p. e18, 2017.
-
 DI TOMMASO, P. et al. Nextflow enables reproducible computational workflows. Nature Biotechnology, v. 35, n. 4, p. 316-319, 2017.
+
+DIERCKXSENS, N.; MARDULYN, P.; SMITS, G. NOVOPlasty: de novo assembly of organelle genomes from whole genome data. Nucleic Acids Research, v. 45, n. 4, p. e18, 2017.
 
 DONATH, A. et al. Improved annotation of protein-coding gene boundaries in metazoan mitochondrial genomes. Molecular Ecology Resources, v. 19, n. 4, p. 609-615, 2019. DOI: 10.1111/1755-0998.12985.
 
@@ -1119,9 +1145,13 @@ EWELS, P. A. et al. The nf-core framework for community-curated bioinformatics p
 
 GRÜNING, B. et al. Practical computational reproducibility in the life sciences. Cell Systems, v. 6, n. 6, p. 631-635, 2018.
 
+GUERREIRO, S. L. M. et al. Analysis of the Entire Mitogenome of the Threatened Freshwater Stingray *Potamotrygon leopoldi* (Myliobatiformes: Potamotrygonidae) and Comprehensive Phylogenetic Assessment in the Xingu River, Brazilian Amazon. *International Journal of Molecular Sciences*, v. 26, art. 8252, 2025. DOI: 10.3390/ijms26178252.
+
 HAHN, C.; BACHMANN, L.; CHEVREUX, B. Reconstructing mitochondrial genomes directly from genomic next-generation sequencing reads — a baiting and iterative mapping approach. Nucleic Acids Research, v. 41, n. 13, p. e129, 2013. DOI: 10.1093/nar/gkt371.
 
 HARGER, J. W.; MESKAUSKAS, A.; DINMAN, J. D. An "integrated model" of programmed ribosomal frameshifting. Trends in Biochemical Sciences, v. 27, n. 9, p. 448-454, 2002. DOI: 10.1016/S0968-0004(02)02149-7.
+
+HONG, Y.-H. et al. Differential Mitochondrial Genome Expression of Four Hylid Frog Species under Low-Temperature Stress and Its Relationship with Amphibian Temperature Adaptation. *International Journal of Molecular Sciences*, v. 25, art. 5967, 2024. DOI: 10.3390/ijms25115967.
 
 ICMBio — INSTITUTO CHICO MENDES DE CONSERVAÇÃO DA BIODIVERSIDADE. Plano de Ação Nacional para a Conservação da Arara-azul-de-lear. Brasília: ICMBio, 2022.
 
@@ -1131,11 +1161,17 @@ JACKS, T. et al. Characterization of ribosomal frameshifting in HIV-1 gag-pol ex
 
 JIN, J.-J. et al. GetOrganelle: a fast and versatile toolkit for accurate de novo assembly of organelle genomes. Genome Biology, v. 21, n. 1, p. 241, 2020. DOI: 10.1186/s13059-020-02154-5.
 
+KARTAVTSEV, Y. P.; MASALKOVA, N. A. Structure, Evolution, and Mitochondrial Genome Analysis of Mussel Species (Bivalvia, Mytilidae). *International Journal of Molecular Sciences*, v. 25, art. 6902, 2024. DOI: 10.3390/ijms25136902.
+
+KUNDU, S. et al. Mitogenomic Characterization and Phylogenetic Placement of African Hind, *Cephalopholis taeniops*: Shedding Light on the Evolution of Groupers (Serranidae: Epinephelinae). *International Journal of Molecular Sciences*, v. 25, art. 1822, 2024. DOI: 10.3390/ijms25031822.
+
 KÖSTER, J.; RAHMANN, S. Snakemake—a scalable bioinformatics workflow engine. Bioinformatics, v. 28, n. 19, p. 2520-2522, 2012.
 
 LARMAN, C.; BASILI, V. R. Iterative and incremental development: a brief history. IEEE Computer, v. 36, n. 6, p. 47-56, 2003. DOI: 10.1109/MC.2003.1204375.
 
 LEINONEN, R.; SUGAWARA, H.; SHUMWAY, M. The Sequence Read Archive. Nucleic Acids Research, v. 39, supl. 1, p. D19-D21, 2011. DOI: 10.1093/nar/gkq1019.
+
+LI, F. et al. The Complete Mitochondrial Genomes of Two Rock Scallops (Bivalvia: Spondylidae) Indicate Extensive Gene Rearrangements and Adaptive Evolution Compared with Pectinidae. *International Journal of Molecular Sciences*, v. 24, art. 13844, 2023. DOI: 10.3390/ijms241813844.
 
 LORENZ, R. et al. ViennaRNA Package 2.0. Algorithms for Molecular Biology, v. 6, art. 26, 2011. DOI: 10.1186/1748-7188-6-26.
 
@@ -1149,41 +1185,28 @@ MINDELL, D. P.; SORENSON, M. D.; DIMCHEFF, D. E. An extra nucleotide is not tran
 
 NCBI — NATIONAL CENTER FOR BIOTECHNOLOGY INFORMATION. SRA Toolkit Documentation. Bethesda: National Library of Medicine, 2023. Disponível em: https://github.com/ncbi/sra-tools. Acesso em: 10 mar. 2026.
 
-
 PENG, R. D. Reproducible research in computational science. Science, v. 334, n. 6060, p. 1226-1227, 2011. DOI: 10.1126/science.1213847.
 
 RUSSELL, R. D.; BECKENBACH, A. T. Recoding of translation in turtle mitochondrial genomes: programmed frameshift mutations and evidence of a modified genetic code. Journal of Molecular Evolution, v. 67, n. 6, p. 682-695, 2008. DOI: 10.1007/s00239-008-9179-0.
 
 SANDVE, G. K. et al. Ten simple rules for reproducible computational research. PLoS Computational Biology, v. 9, n. 10, p. e1003285, 2013.
 
-SOMMERVILLE, I. Software Engineering. 10. ed. Harlow: Pearson Education, 2016.
-
-ULIANO-SILVA, M. et al. MitoHiFi: a pipeline for mitochondrial genome assembly from PacBio HiFi reads. BMC Bioinformatics, v. 24, art. 288, 2023. DOI: 10.1186/s12859-023-05385-y.
-
-WILKINSON, M. D. et al. The FAIR Guiding Principles for scientific data management and stewardship. Scientific Data, v. 3, p. 160018, 2016.
-
-ALBOASUD, M.; JEONG, H.; LEE, T. Complete Mitochondrial Genomes and Phylogenetic Analysis of Genus *Henricia* (Asteroidea: Spinulosida: Echinasteridae). *International Journal of Molecular Sciences*, v. 25, art. 5575, 2024. DOI: 10.3390/ijms25115575.
-
-GUERREIRO, S. L. M. et al. Analysis of the Entire Mitogenome of the Threatened Freshwater Stingray *Potamotrygon leopoldi* (Myliobatiformes: Potamotrygonidae) and Comprehensive Phylogenetic Assessment in the Xingu River, Brazilian Amazon. *International Journal of Molecular Sciences*, v. 26, art. 8252, 2025. DOI: 10.3390/ijms26178252.
-
-HONG, Y.-H. et al. Differential Mitochondrial Genome Expression of Four Hylid Frog Species under Low-Temperature Stress and Its Relationship with Amphibian Temperature Adaptation. *International Journal of Molecular Sciences*, v. 25, art. 5967, 2024. DOI: 10.3390/ijms25115967.
-
-KARTAVTSEV, Y. P.; MASALKOVA, N. A. Structure, Evolution, and Mitochondrial Genome Analysis of Mussel Species (Bivalvia, Mytilidae). *International Journal of Molecular Sciences*, v. 25, art. 6902, 2024. DOI: 10.3390/ijms25136902.
-
-KUNDU, S. et al. Mitogenomic Characterization and Phylogenetic Placement of African Hind, *Cephalopholis taeniops*: Shedding Light on the Evolution of Groupers (Serranidae: Epinephelinae). *International Journal of Molecular Sciences*, v. 25, art. 1822, 2024. DOI: 10.3390/ijms25031822.
-
-LI, F. et al. The Complete Mitochondrial Genomes of Two Rock Scallops (Bivalvia: Spondylidae) Indicate Extensive Gene Rearrangements and Adaptive Evolution Compared with Pectinidae. *International Journal of Molecular Sciences*, v. 24, art. 13844, 2023. DOI: 10.3390/ijms241813844.
-
 SHI, A. et al. Characterization, Codon Usage Pattern and Phylogenetic Implications of the Waterlily Aphid *Rhopalosiphum nymphaeae* (Hemiptera: Aphididae) Mitochondrial Genome. *International Journal of Molecular Sciences*, v. 25, art. 11336, 2024. DOI: 10.3390/ijms252111336.
+
+SOMMERVILLE, I. Software Engineering. 10. ed. Harlow: Pearson Education, 2016.
 
 TAO, K. et al. Comparative Mitogenome Analyses of Fifteen Ramshorn Snails and Insights into the Phylogeny of Planorbidae (Gastropoda: Hygrophila). *International Journal of Molecular Sciences*, v. 25, art. 2279, 2024. DOI: 10.3390/ijms25042279.
 
+ULIANO-SILVA, M. et al. MitoHiFi: a pipeline for mitochondrial genome assembly from PacBio HiFi reads. BMC Bioinformatics, v. 24, art. 288, 2023. DOI: 10.1186/s12859-023-05385-y.
+
 WEI, Z. et al. The Mitogenomic Landscape of Hexacorallia Corals: Insight into Their Slow Evolution. *International Journal of Molecular Sciences*, v. 25, art. 8218, 2024. DOI: 10.3390/ijms25158218.
+
+WILKINSON, M. D. et al. The FAIR Guiding Principles for scientific data management and stewardship. Scientific Data, v. 3, p. 160018, 2016.
+
+WILSON, G. et al. Best practices for scientific computing. PLoS Biology, v. 12, n. 1, e1001745, 2014. DOI: 10.1371/journal.pbio.1001745.
 
 YE, P. et al. Potential Cryptic Diversity in the Genus *Scoliodon* (Carcharhiniformes: Carcharhinidae): Insights from Mitochondrial Genome Sequencing. *International Journal of Molecular Sciences*, v. 25, art. 11851, 2024. DOI: 10.3390/ijms252111851.
 
 ZHAN, L. et al. The Phylogenetic Relationships of Major Lizard Families Using Mitochondrial Genomes and Selection Pressure Analyses in Anguimorpha. *International Journal of Molecular Sciences*, v. 25, art. 8464, 2024. DOI: 10.3390/ijms25158464.
 
 ZHOU, Z. et al. The Complete Mitochondrial Genome and Phylogenetic Analysis of the Freshwater Shellfish *Novaculina chinensis* (Bivalvia: Pharidae). *International Journal of Molecular Sciences*, v. 25, art. 67, 2024. DOI: 10.3390/ijms25010067.
-
-WILSON, G. et al. Best practices for scientific computing. PLoS Biology, v. 12, n. 1, e1001745, 2014. DOI: 10.1371/journal.pbio.1001745.
