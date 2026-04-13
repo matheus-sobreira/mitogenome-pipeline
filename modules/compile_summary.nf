@@ -19,7 +19,7 @@ process COMPILE_SUMMARY {
     tuple val(sample_id), path(assembly), path(mitos_dir)
 
     output:
-    path "${sample_id}/*", emit: deliverables
+    path "deliverables/**", emit: deliverables
 
     script:
     def organism = params.organism ?: "Unknown organism"
@@ -46,6 +46,6 @@ process COMPILE_SUMMARY {
         --mitos-dir ${mitos_dir} \\
         --genbank-dir genbank_tmp/ \\
         --organism "${organism}" \\
-        --outdir ${sample_id}
+        --outdir deliverables
     """
 }

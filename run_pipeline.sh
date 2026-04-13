@@ -18,13 +18,14 @@ cd "$SCRIPT_DIR"
 
 # ── Extrair nome do perfil para o log ────────────────────────────────────────
 PROFILE="unknown"
+prev=""
 for i in "$@"; do
     if [[ "$prev" == "-profile" ]]; then
         PROFILE="$i"
         break
     fi
     prev="$i"
-done 2>/dev/null || true
+done
 
 TIMESTAMP=$(date +"%Y-%m-%d_%Hh%M")
 LOGDIR="logs"
