@@ -119,12 +119,12 @@ ADJUSTED=$(awk -v mr="$MITO_READS" -v qf="$Q30_FACTOR" -v af="$ADAPTER_FACTOR" \
 # Total de reads necessários
 RAW=$(awk -v adj="$ADJUSTED" -v mf="$MITO_FRACTION" 'BEGIN{printf "%d", adj / mf}')
 
-# Margem de segurança (1.5×) + mínimo 5M + máximo 50M + arredonda p/ milhão
-# Cap de 50M: suficiente para >500× em qualquer mitogenoma (~17kb)
+# Margem de segurança (1.5×) + mínimo 5M + máximo 25M + arredonda p/ milhão
+# Cap de 25M: 20M reads → 306× (A. leari), NOVOPlasty usa ~23% → 25M garante >150×
 RECOMMENDED=$(awk -v r="$RAW" 'BEGIN{
     v = r * 1.5
     if (v < 5000000)  v = 5000000
-    if (v > 50000000) v = 50000000
+    if (v > 25000000) v = 25000000
     v = int((v + 500000) / 1000000) * 1000000
     printf "%d", v
 }')
