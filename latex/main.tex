@@ -1,0 +1,282 @@
+%% ============================================================================
+%% TCC — Pipeline Reprodutível para Montagem e Anotação de Mitogenomas
+%% UERN — Universidade do Estado do Rio Grande do Norte
+%% Autor: Matheus Sobreira Benevides
+%% Formatação: Manual de Normalização UERN (3ª edição, 2022) + ABNT
+%% ============================================================================
+
+\documentclass[
+    12pt,               % Tamanho da fonte (UERN: 12pt)
+    openright,          % Capítulos iniciam em páginas ímpares
+    oneside,            % Impressão apenas anverso (digital)
+    a4paper,            % Tamanho do papel
+    chapter=TITLE,      % Títulos de capítulo em maiúsculas
+    section=TITLE,      % Seções primárias em maiúsculas
+    english,            % Idioma secundário
+    brazil,             % Idioma principal
+    draft               % REMOVER para PDF final (acelera compilação)
+]{abntex2}
+
+% ---- Pacotes fundamentais ----
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{mathptmx}           % Fonte Times New Roman (UERN)
+\usepackage{lmodern}            % Evita fontes cm-super Type1 (acelera embed de ~25 fontes)
+% microtype removido temporariamente (lento no Overleaf; adicionar de volta no PDF final)
+\usepackage{indentfirst}        % Recuo na primeira linha de cada parágrafo
+
+% ---- Pacotes de citação e referência (ABNT) ----
+% backref removido temporariamente (lento; adicionar de volta no PDF final)
+\usepackage[alf]{abntex2cite}   % Sistema autor-data ABNT
+
+% ---- Pacotes adicionais ----
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{url}
+\usepackage[left=3cm,top=3cm,right=2cm,bottom=2cm]{geometry}
+% todonotes removido (carrega TikZ/PGF inteiro, lento no Overleaf)
+\newcommand{\missingfigure}[2][]{{\centering\fbox{\parbox{0.8\textwidth}{\textit{[Figura pendente: #2]}}}\par}}
+
+% ---- Configuração de espaçamento (UERN: 1,5 entre linhas) ----
+\OnehalfSpacing
+
+% ---- Configuração de recuo do parágrafo (UERN: 1,25 cm) ----
+\setlength{\parindent}{1.25cm}
+
+% ---- Tolerância para evitar Overfull \hbox menores ----
+\setlength{\emergencystretch}{3em}
+
+% ---- Configuração de listings para blocos de código ----
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    columns=fullflexible,
+    keepspaces=true,
+    showstringspaces=false,
+    literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+             {ã}{{\~a}}1 {õ}{{\~o}}1 {ç}{{\c{c}}}1
+             {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+             {Ã}{{\~A}}1 {Õ}{{\~O}}1 {Ç}{{\c{C}}}1
+}
+
+% backref config removida temporariamente (adicionar de volta no PDF final)
+% \renewcommand{\backrefpagesname}{Citado na(s) página(s):~}
+% \renewcommand{\backref}{}
+% \renewcommand*{\backrefalt}[4]{
+%     \ifcase #1
+%         Nenhuma citação no texto.
+%     \or
+%         Citado na página #2.
+%     \else
+%         Citado #1 vezes nas páginas #2.
+%     \fi
+% }
+
+% ---- Configuração de captions (UERN: fonte 10, alinhado à esquerda) ----
+\captionsetup{
+    font=small,
+    justification=raggedright,
+    singlelinecheck=false,
+    labelsep=endash
+}
+
+% ---- Informações do documento ----
+\titulo{Construção de um Pipeline Reprodutível para Montagem e Anotação Automatizada de Mitogenomas: Aplicação à Arara-azul-de-lear (\texorpdfstring{\textit{Anodorhynchus leari}}{Anodorhynchus leari})}
+\autor{Matheus Sobreira Benevides}
+\local{Mossoró}
+\data{2025}
+\orientador{Prof. Wilfredo}
+
+\instituicao{%
+    UNIVERSIDADE DO ESTADO DO RIO GRANDE DO NORTE
+    \par
+    FACULDADE DE CIÊNCIAS EXATAS E NATURAIS
+    \par
+    DEPARTAMENTO DE INFORMÁTICA
+    \par
+    CURSO DE CIÊNCIA DA COMPUTAÇÃO
+}
+
+\tipotrabalho{Monografia}
+\preambulo{Monografia apresentada ao Curso de Ciência da Computação da Universidade do Estado do Rio Grande do Norte, como requisito parcial para obtenção do grau de Bacharel em Ciência da Computação.}
+
+% ============================================================================
+% INÍCIO DO DOCUMENTO
+% ============================================================================
+\begin{document}
+
+% ---- Configuração do PDF (deve ficar após \begin{document}) ----
+\hypersetup{
+    pdftitle={Construção de um Pipeline Reprodutível para Montagem e Anotação Automatizada de Mitogenomas},
+    pdfauthor={Matheus Sobreira Benevides},
+    pdfsubject={Bioinformática -- Montagem de Mitogenomas},
+    pdfkeywords={mitogenoma, pipeline, Nextflow, Docker, arara-azul-de-lear},
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    filecolor=black,
+    urlcolor=blue,
+    bookmarksdepth=2
+}
+
+% Seleciona o idioma principal
+\selectlanguage{brazil}
+
+% Retira espaço extra obsoleto entre frases
+\frenchspacing
+
+% ============================================================================
+% ELEMENTOS PRÉ-TEXTUAIS
+% ============================================================================
+\pretextual
+
+% ---- CAPA ----
+\imprimircapa
+
+% ---- FOLHA DE ROSTO ----
+\imprimirfolhaderosto
+
+% ---- FOLHA DE APROVAÇÃO ----
+\begin{folhadeaprovacao}
+    \begin{center}
+        {\ABNTEXchapterfont\bfseries\MakeUppercase{\imprimirautor}}
+        \vspace*{1cm}
+
+        {\ABNTEXchapterfont\bfseries\MakeUppercase{\imprimirtitulo}}
+        \vspace*{1cm}
+    \end{center}
+
+    \hfill
+    \begin{minipage}{0.55\textwidth}
+        \SingleSpacing
+        \imprimirpreambulo
+    \end{minipage}
+
+    \vspace*{1cm}
+
+    Aprovada em: \_\_\_\_/\_\_\_\_/\_\_\_\_\_\_\_\_.
+
+    \vspace*{1cm}
+    \begin{center}
+        \textbf{Banca examinadora}
+    \end{center}
+
+    \vspace*{1cm}
+    \assinatura{Prof. Wilfredo (Orientador) \\ Universidade do Estado do Rio Grande do Norte -- UERN}
+    \assinatura{Prof. Carlos \\ Universidade do Estado do Rio Grande do Norte -- UERN}
+    \assinatura{Prof. Bruno \\ Universidade do Estado do Rio Grande do Norte -- UERN}
+\end{folhadeaprovacao}
+
+% ---- DEDICATÓRIA (opcional) ----
+% \begin{dedicatoria}
+%     \vspace*{\fill}
+%     \hspace{8cm}
+%     \begin{minipage}{\dimexpr\textwidth-8cm}
+%         Texto da dedicatória.
+%     \end{minipage}
+% \end{dedicatoria}
+
+% ---- AGRADECIMENTOS (opcional) ----
+% \begin{agradecimentos}
+%     Texto dos agradecimentos.
+% \end{agradecimentos}
+
+% ---- EPÍGRAFE (opcional) ----
+% \begin{epigrafe}
+%     \vspace*{\fill}
+%     \hspace{8cm}
+%     \begin{minipage}{\dimexpr\textwidth-8cm}
+%         ``Texto da epígrafe.'' (AUTOR, ano, p. X).
+%     \end{minipage}
+% \end{epigrafe}
+
+% ---- RESUMO ----
+\begin{resumo}
+    Este trabalho apresenta o desenvolvimento e a validação de um pipeline de bioinformática automatizado, reprodutível e portável para a montagem \textit{de novo} e anotação funcional de genomas mitocondriais, utilizando tecnologias de conteinerização (Docker) e sistemas de gerenciamento de \textit{workflows} (Nextflow DSL2). O pipeline integra sete etapas sequenciais --- análise piloto de qualidade, aquisição de dados do NCBI SRA, controle de qualidade com FastQC, remoção de adaptadores com Trim Galore, montagem com NOVOPlasty, anotação funcional com MITOS2 e compilação automática de 14 categorias de entregáveis, incluindo arquivos em formato GenBank Flat File prontos para submissão. A validação foi realizada com duas espécies: \textit{Diploprion bifasciatus} (Perciformes), como espécie-controle, e a arara-azul-de-lear (\textit{Anodorhynchus leari}, Psittaciformes), como espécie-alvo. O mitogenoma da arara-azul-de-lear foi reconstruído com 16.986 pares de bases circularizados, cobertura de 306$\times$ e o conjunto completo de 37 genes (13 CDS, 22 tRNAs, 2 rRNAs), diferindo em apenas 13 bp do congênere \textit{A. hyacinthinus}. O módulo Pilot QC, juntamente com estratégias de truncamento adaptativo, permitiu reduzir o volume de dados em aproximadamente 5 milhões de vezes (de 87 GB para 17 KB), viabilizando a execução completa em um notebook com 16 GB de RAM em menos de uma hora. O pipeline e o código-fonte estão disponíveis em repositório público no GitHub, como contribuição à ciência aberta e à conservação da biodiversidade brasileira.
+
+    \vspace{\onelineskip}
+    \noindent
+    \textbf{Palavras-chave}: mitogenoma; pipeline; bioinformática; reprodutibilidade; Nextflow; Docker; arara-azul-de-lear.
+\end{resumo}
+
+% ---- ABSTRACT ----
+\begin{resumo}[Abstract]
+    \begin{otherlanguage*}{english}
+        This work presents the development and validation of an automated, reproducible and portable bioinformatics pipeline for \textit{de novo} assembly and functional annotation of mitochondrial genomes, using containerization technologies (Docker) and workflow management systems (Nextflow DSL2). The pipeline integrates seven sequential stages --- pilot quality analysis, NCBI SRA data acquisition, quality control with FastQC, adapter removal with Trim Galore, assembly with NOVOPlasty, functional annotation with MITOS2, and automatic compilation of 14 deliverable categories, including GenBank Flat File format files ready for submission. Validation was performed with two species: \textit{Diploprion bifasciatus} (Perciformes), as a control species, and the Lear's Macaw (\textit{Anodorhynchus leari}, Psittaciformes), as the target species. The Lear's Macaw mitogenome was reconstructed with 16,986 circularized base pairs, 306$\times$ coverage and the complete set of 37 genes (13 CDS, 22 tRNAs, 2 rRNAs), differing by only 13 bp from the congeneric \textit{A. hyacinthinus}. The Pilot QC module, combined with adaptive truncation strategies, reduced the data volume by approximately 5 million times (from 87 GB to 17 KB), enabling complete execution on a notebook with 16 GB of RAM in under one hour. The pipeline and source code are available in a public GitHub repository, as a contribution to open science and the conservation of Brazilian biodiversity.
+
+        \vspace{\onelineskip}
+        \noindent
+        \textbf{Keywords}: mitogenome; pipeline; bioinformatics; reproducibility; Nextflow; Docker; Lear's Macaw.
+    \end{otherlanguage*}
+\end{resumo}
+
+% ---- LISTA DE ILUSTRAÇÕES (opcional) ----
+% \pdfbookmark[0]{\listfigurename}{lof}
+% \listoffigures*
+% \cleardoublepage
+
+% ---- LISTA DE TABELAS (opcional) ----
+% \pdfbookmark[0]{\listtablename}{lot}
+% \listoftables*
+% \cleardoublepage
+
+% ---- LISTA DE ABREVIATURAS E SIGLAS ----
+\begin{siglas}
+    \item[ABNT] Associação Brasileira de Normas Técnicas
+    \item[bp] Pares de bases (\textit{base pairs})
+    \item[CDS] Sequência codificante (\textit{Coding Sequence})
+    \item[DNA] Ácido desoxirribonucleico
+    \item[FAIR] \textit{Findable, Accessible, Interoperable, and Reusable}
+    \item[GFF] \textit{General Feature Format}
+    \item[HPC] Computação de Alto Desempenho (\textit{High Performance Computing})
+    \item[IUCN] União Internacional para a Conservação da Natureza
+    \item[mRNA] RNA mensageiro
+    \item[mtDNA] DNA mitocondrial
+    \item[NCBI] \textit{National Center for Biotechnology Information}
+    \item[NGS] Sequenciamento de Nova Geração (\textit{Next-Generation Sequencing})
+    \item[ORF] Quadro aberto de leitura (\textit{Open Reading Frame})
+    \item[RNA] Ácido ribonucleico
+    \item[rRNA] RNA ribossomal
+    \item[RSCU] \textit{Relative Synonymous Codon Usage}
+    \item[SRA] \textit{Sequence Read Archive}
+    \item[tRNA] RNA transportador
+\end{siglas}
+
+% ---- SUMÁRIO ----
+\pdfbookmark[0]{\contentsname}{toc}
+\tableofcontents*
+\cleardoublepage
+
+% ============================================================================
+% ELEMENTOS TEXTUAIS
+% ============================================================================
+\textual
+
+% Para compilar apenas um capítulo no Overleaf (descomente e ajuste):
+% \includeonly{capitulos/cap6-mitogenoma}
+
+\input{capitulos/cap1-introducao}
+\input{capitulos/cap2-referencial}
+\input{capitulos/cap3-trabalhos-relacionados}
+\input{capitulos/cap4-metodologia}
+\input{capitulos/cap5-resultados}
+\input{capitulos/cap6-mitogenoma}
+\input{capitulos/cap7-consideracoes}
+
+% ============================================================================
+% ELEMENTOS PÓS-TEXTUAIS
+% ============================================================================
+\postextual
+
+% ---- REFERÊNCIAS ----
+\bibliography{references}
+
+\end{document}
