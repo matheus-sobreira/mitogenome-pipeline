@@ -42,23 +42,28 @@ MKFG
         --max-size 50G \\
         --output-directory .
 
-    # Etapa 2: fasterq-dump — converte o .sra local para FASTQ
-    fasterq-dump \\
-        ${accession}/${accession}.sra \\
-        --split-files \\
-        --threads ${task.cpus} \\
-        --outdir . \\
-        --temp /tmp
+    # Etapa 2: converte o .sra local para FASTQ
+    if [ ${max_reads} -gt 0 ]; then
+        # fastq-dump com -X limita a extração aos primeiros N spots,
+        # evitando gravar o dataset inteiro em disco (crucial para metagenomas)
+        echo "Extraindo apenas ${max_reads} spots com fastq-dump -X..."
+        fastq-dump \\
+            ${accession}/${accession}.sra \\
+            --split-files \\
+            -X ${max_reads} \\
+            --outdir .
+    else
+        # Sem limite: usa fasterq-dump (mais rápido, multi-thread)
+        fasterq-dump \\
+            ${accession}/${accession}.sra \\
+            --split-files \\
+            --threads ${task.cpus} \\
+            --outdir . \\
+            --temp . \\
+            --disk-limit unlimited
+    fi
 
     # Libera espaço: apaga o diretório .sra (não é mais necessário)
     rm -rf ${accession}
-
-    # Etapa 3: se sra_max_reads definido, trunca os FASTQs para economizar disco e tempo
-    if [ ${max_reads} -gt 0 ]; then
-        MAX_LINES=\$(( ${max_reads} * 4 ))
-        echo "Truncando FASTQs para ${max_reads} reads (\$MAX_LINES linhas)..."
-        head -n \$MAX_LINES ${accession}_1.fastq > tmp_1.fastq && mv tmp_1.fastq ${accession}_1.fastq
-        head -n \$MAX_LINES ${accession}_2.fastq > tmp_2.fastq && mv tmp_2.fastq ${accession}_2.fastq
-    fi
     """
 }

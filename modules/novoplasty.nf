@@ -24,6 +24,7 @@ process NOVOPLASTY {
     input:
     tuple val(sample_id), path(read1), path(read2)
     path  seed
+    val   read_len
 
     output:
     path "*.fasta",    emit: assembly, optional: true
@@ -33,10 +34,27 @@ process NOVOPLASTY {
     script:
     def kmers = params.novoplasty_kmers ?: "${params.k_mer}"
     def max_iter = params.novoplasty_max_iterations ?: 3
+    def max_mem_param = params.max_memory
 
     """
     #!/bin/bash
     set -euo pipefail
+
+    # ── Auto-detecção de memória ────────────────────────────────────────
+    if [ "${max_mem_param}" = "null" ] || [ -z "${max_mem_param}" ]; then
+        MAX_MEM=\$(awk '/MemTotal/{
+            total_gb = \$2 / 1024 / 1024
+            half = int(total_gb * 0.5)
+            minus4 = int(total_gb - 4)
+            result = (half < minus4) ? half : minus4
+            if (result < 2) result = 2
+            print result
+        }' /proc/meminfo)
+        echo "=== Auto-detect: RAM total = \$(awk '/MemTotal/{printf \"%.1f\", \$2/1024/1024}' /proc/meminfo) GB, NOVOPlasty max = \$MAX_MEM GB ==="
+    else
+        MAX_MEM=${max_mem_param}
+        echo "=== Usando max_memory configurado: \$MAX_MEM GB ==="
+    fi
 
     ORIGINAL_SEED="${seed}"
     CIRCULARIZED=false
@@ -60,7 +78,7 @@ Project name          = ${sample_id}
 Type                  = mito
 Genome Range          = ${params.genome_range}
 K-mer                 = \$KMER
-Max memory            = ${params.max_memory}
+Max memory            = \$MAX_MEM
 Extended log          = 0
 Save assembled reads  = no
 Seed Input            = \$SEED
@@ -71,7 +89,7 @@ Chloroplast sequence  =
 
 Dataset 1:
 -----------------------
-Read Length           = ${params.read_length}
+Read Length           = ${read_len}
 Insert size           = ${params.insert_size}
 Platform              = illumina
 Single/Paired         = PE

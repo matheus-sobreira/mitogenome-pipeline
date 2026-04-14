@@ -38,6 +38,8 @@ workflow {
     Range mtDNA : ${params.genome_range} bp
     Código gen. : ${params.genetic_code}  (2=vertebrado; 5=invertebrado)
     Max reads   : ${params.sra_max_reads != null ? params.sra_max_reads : '(automático — Pilot QC)'}
+    Read length : ${params.sra_max_reads != null ? params.read_length + ' bp (config)' : '(automático — Pilot QC)'}
+    Max memory  : ${params.max_memory != null ? params.max_memory + ' GB (config)' : '(automático)'}
     BD MITOS2   : ${params.mitos2_db ?: '(não informado — etapa de anotação pulada)'}
     Organismo   : ${params.organism ?: '(não informado)'}
     """.stripIndent()
@@ -53,11 +55,13 @@ workflow {
     // fração mitocondrial e adaptadores para recomendar o max_reads ideal.
     if (params.sra_max_reads != null) {
         log.info "Pilot QC: pulado (sra_max_reads = ${params.sra_max_reads})"
-        max_reads_ch = Channel.value(params.sra_max_reads)
+        max_reads_ch   = Channel.value(params.sra_max_reads)
+        read_length_ch = Channel.value(params.read_length)
     } else {
         log.info "Pilot QC: ativado — analisando ${params.pilot_reads ?: 500000} reads piloto..."
         SRA_PILOT(accession_ch, seed_file)
-        max_reads_ch = SRA_PILOT.out.recommended_reads
+        max_reads_ch   = SRA_PILOT.out.recommended_reads
+        read_length_ch = SRA_PILOT.out.read_length
     }
 
     // ── Etapa 1: Download das leituras via SRA-Toolkit ──────────────
@@ -70,7 +74,7 @@ workflow {
     TRIM_GALORE(SRA_DOWNLOAD.out.reads)
 
     // ── Etapa 4: Montagem do mitogenoma ─────────────────────────────
-    NOVOPLASTY(TRIM_GALORE.out.reads, seed_file)
+    NOVOPLASTY(TRIM_GALORE.out.reads, seed_file, read_length_ch)
 
     // ── Etapa 5: Anotação funcional (MITOS2) ────────────────────────
     // Executada apenas quando --mitos2_db for informado no perfil ou CLI.
@@ -107,12 +111,36 @@ workflow {
 }
 
 workflow.onComplete {
+    // Verifica se houve montagem circularizada nos resultados
+    def assemblyDir = file("${params.outdir}/assembly")
+    def circularized = assemblyDir.exists() ?
+        assemblyDir.listFiles()?.findAll { it.name.startsWith('Circularized_assembly') } : []
+    def hasCircularized = circularized && !circularized.isEmpty()
+
+    def status
+    if (!workflow.success) {
+        status = 'FALHOU ✗'
+    } else if (!hasCircularized) {
+        status = 'INCOMPLETO ⚠ — montagem não circularizou'
+    } else {
+        status = 'SUCESSO ✓'
+    }
+
     log.info """
     ╔══════════════════════════════════════════════════════════╗
     ║                 PIPELINE CONCLUÍDO                       ║
     ╚══════════════════════════════════════════════════════════╝
-    Status  : ${workflow.success ? 'SUCESSO ✓' : 'FALHOU ✗'}
+    Status  : ${status}
     Duração : ${workflow.duration}
     Saída   : ${params.outdir}
     """.stripIndent()
+
+    if (!hasCircularized && workflow.success) {
+        log.warn "O NOVOPlasty não conseguiu circularizar o genoma mitocondrial."
+        log.warn "Possíveis causas:"
+        log.warn "  • Cobertura mitocondrial insuficiente no dataset"
+        log.warn "  • Seed muito divergente da espécie-alvo"
+        log.warn "  • Dataset não é WGS (ex: exoma, RAD-seq, RNA-seq)"
+        log.warn "Verifique o log do NOVOPlasty em: ${params.outdir}/assembly/"
+    }
 }

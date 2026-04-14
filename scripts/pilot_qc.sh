@@ -172,3 +172,4 @@ REPORT
 cat pilot_report.txt >&2
 
 echo "${RECOMMENDED}" > recommended_reads.txt
+echo "${AVG_READ_LEN}" > read_length.txt

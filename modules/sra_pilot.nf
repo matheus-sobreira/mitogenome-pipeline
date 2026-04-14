@@ -23,6 +23,7 @@ process SRA_PILOT {
 
     output:
     env RECOMMENDED_READS, emit: recommended_reads
+    env READ_LENGTH,       emit: read_length
     path "pilot_report.txt", emit: report
 
     script:
@@ -60,6 +61,7 @@ MKFG
 
     # Captura para output env do Nextflow
     RECOMMENDED_READS=\$(cat recommended_reads.txt)
+    READ_LENGTH=\$(cat read_length.txt)
 
     # Limpeza — pilot reads não são necessários no futuro
     rm -f ${accession}_1.fastq ${accession}_2.fastq
