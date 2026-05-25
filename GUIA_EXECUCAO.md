@@ -11,11 +11,23 @@
 
 ## 1. Preparação (apenas uma vez)
 
-### Construir imagens Docker
+### Obter as imagens Docker
+
+As 5 imagens do pipeline (`sra-tools`, `fastqc`, `trim-galore`, `novoplasty`, `mitos2`) estão publicadas no **GitHub Container Registry** com tag `:1.0` (imutável). O Nextflow puxa automaticamente na primeira execução; não é necessário fazer build local.
+
+Para pré-baixar (opcional, evita atraso no primeiro run):
 
 ```bash
-for dir in sra-tools fastqc trim-galore novoplasty mitos2; do
-    docker build -t "mitogenome-pipeline/${dir}:1.0" "docker/${dir}"
+for tool in sra-tools fastqc trim-galore novoplasty mitos2; do
+    docker pull "ghcr.io/matheus-sobreira/mitogenome-pipeline/${tool}:1.0"
+done
+```
+
+Se preferir buildar localmente (por exemplo, para modificar uma etapa), buildando **e retaggeando** para o namespace que o Nextflow espera:
+
+```bash
+for tool in sra-tools fastqc trim-galore novoplasty mitos2; do
+    docker build -t "ghcr.io/matheus-sobreira/mitogenome-pipeline/${tool}:1.0" "docker/${tool}"
 done
 ```
 
@@ -32,23 +44,36 @@ rm refseq89m.tar.bz2
 
 ## 2. Executar o pipeline
 
+O pipeline tem três perfis disponíveis:
+
 ```bash
-# Arara-azul-de-lear (estudo principal)
+# Arara-azul-de-lear (espécie-alvo do TCC)
 ./run_pipeline.sh -profile a_leari
 
-# D. bifasciatus (validação — sem anotação MITOS2)
+# Diploprion bifasciatus (espécie-controle — verifica que o pipeline reproduz uma referência conhecida; anotação MITOS2 desativada por padrão)
 ./run_pipeline.sh -profile test
+
+# Arara-azul-grande (validação cruzada recíproca; usa cox1 da montagem de A. leari como semente)
+./run_pipeline.sh -profile a_hyacinthinus
 ```
 
-O `run_pipeline.sh` executa em background com `nohup` — o terminal pode ser fechado sem interromper. O log fica em `logs/`.
+### Como funciona o `run_pipeline.sh`
 
-Para acompanhar:
+O script executa o Nextflow em **background via `nohup`** — o terminal pode ser fechado, a conexão SSH pode cair, e o pipeline continua rodando. Cada execução gera um log timestamped em `logs/<perfil>_<timestamp>.log` e grava o PID em `logs/.last_pid` para facilitar acompanhamento.
+
+Para acompanhar a execução em tempo real:
 
 ```bash
 tail -f logs/a_leari_*.log
 ```
 
-Alternativamente, para execução direta no terminal:
+Para verificar se o processo continua vivo:
+
+```bash
+kill -0 $(cat logs/.last_pid) && echo "rodando" || echo "terminou"
+```
+
+Alternativamente, para execução direta no terminal (sem nohup):
 
 ```bash
 nextflow run main.nf -profile a_leari
@@ -98,9 +123,9 @@ SRA_PILOT → SRA_DOWNLOAD → FASTQC → TRIM_GALORE → NOVOPLASTY → MITOS2 
 
 ## 6. Saídas
 
-Os resultados ficam em `results/<espécie>/summary/`:
+Os resultados ficam em `results/<espécie>/summary/deliverables/`:
 
-| Arquivo | Conteúdo |
+| Arquivo / Diretório | Conteúdo |
 |---|---|
 | `01_genome_assembly.fasta` | Mitogenoma circularizado |
 | `02_coding_genes_nt.fasta` | 13 CDS (nucleotídeos) |
@@ -110,12 +135,13 @@ Os resultados ficam em `results/<espécie>/summary/`:
 | `06_gene_positions.tsv` | Posição dos genes |
 | `07_start_stop_codons.tsv` | Start/Stop codons |
 | `08_trna_anticodons.tsv` | Anticódons tRNA |
-| `09_circular_map.svg/pdf` | Mapa circular |
-| `10_annotation.gff` | Anotação GFF3 |
-| `11_structure_svgs/` | Estruturas secundárias tRNA/rRNA (SVG) |
-| `12_quality_plots/` | Plots de qualidade MITOS2 |
-| `13_gene_order.txt` | Ordem gênica |
-| `genbank_submission/` | `.gbk` + `.tbl` + `.fsa` para GenBank |
+| `09_circular_map.svg` + `.pdf` | Mapa circular do mitogenoma (Biopython) |
+| `09b_genome_map_linear.png` | Mapa linear do MITOS2 |
+| `10_annotation.gff` | Anotação GFF3 completa |
+| `13_gene_order.txt` | Ordem gênica linear |
+| `structure_svgs/` | Estruturas secundárias de tRNA/rRNA em SVG (ViennaRNA/RNAplot) |
+| `quality_plots/` | Plots de qualidade da anotação MITOS2 |
+| `genbank_submission/` | `.gbk` + `.tbl` + `.fsa` prontos para submissão ao GenBank |
 
 ---
 
@@ -133,7 +159,10 @@ params {
     genome_range     = '15000-18500'
     novoplasty_kmers = '39,33'
     mitos2_db        = "${projectDir}/data/databases/refseq89m"
-    genetic_code     = 2        // 2 = vertebrado, 5 = invertebrado
+    genetic_code     = 2        // Código genético (transl_table do NCBI):
+                                //   2 = mitocondrial vertebrado (aves, peixes, mamíferos, répteis)
+                                //   5 = mitocondrial invertebrado
+                                //   ver: https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi
     organism         = 'Genus species'
 }
 ```
