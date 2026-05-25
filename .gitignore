@@ -45,3 +45,14 @@ docs/TCC_ATUALIZADO.md
 # ── LaTeX / TCC (apenas local, compilado via Overleaf) ───────────────────────
 latex/
 latex-overleaf.zip
+1latex-overleaf.zip
+
+# ── Materiais privados de estudo / defesa (não versionar) ────────────────────
+Apresentação/
+
+# ── Papers de referência e manuais (grandes, não autoria) ────────────────────
+Papers Mitochondrion/
+docs/manual tcc uern.pdf
+
+# ── Logs e estado de execução (runtime, não versionar) ──────────────────────
+logs/*
