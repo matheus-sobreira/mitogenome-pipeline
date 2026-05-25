@@ -115,7 +115,7 @@ Para a lista completa com nomes de arquivo, ver a [Seção 6 do Guia de Execuç�
 
 ---
 
-## Ferramentas (versões pinadas)
+## Ferramentas (versões fixadas)
 
 | Ferramenta | Versão | Imagem Docker |
 |---|---|---|
