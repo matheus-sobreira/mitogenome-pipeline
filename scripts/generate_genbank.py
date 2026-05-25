@@ -212,6 +212,20 @@ def build_genbank_record(gff_features, seqid, sequence, organism, transl_table, 
                 first = p1 if p1["start"] <= p0["start"] else p0
                 second = p0 if p1["start"] <= p0["start"] else p1
 
+                # Ajuste para skip-1 canônico (Mindell 1998) em vertebrados
+                # quando o MITOS2 reporta as duas ORFs com sobreposição. O
+                # programmed ribosomal frameshift do ND3 em aves, tartarugas,
+                # crocodilianos e demais vertebrados não-mamíferos é
+                # representado no GenBank como gap de 1 nt entre os exons.
+                first_end = first["end"]
+                overlap = first["end"] - second["start"] + 1
+                if int(transl_table) == 2 and overlap > 0:
+                    first_end = second["start"] - 2
+                    print(f"  ND3 overlap de {overlap} bp detectado; ajustado "
+                          f"para skip-1 canônico (Mindell 1998): "
+                          f"join({first['start']}..{first_end},"
+                          f"{second['start']}..{second['end']})")
+
                 # Gene spanning full range
                 gene_loc = FeatureLocation(first["start"] - 1, second["end"], strand=strand_val)
                 gene_feat = SeqFeature(gene_loc, type="gene")
@@ -219,7 +233,7 @@ def build_genbank_record(gff_features, seqid, sequence, organism, transl_table, 
                 record.features.append(gene_feat)
 
                 # CDS with join (CompoundLocation)
-                loc1 = FeatureLocation(first["start"] - 1, first["end"], strand=strand_val)
+                loc1 = FeatureLocation(first["start"] - 1, first_end, strand=strand_val)
                 loc2 = FeatureLocation(second["start"] - 1, second["end"], strand=strand_val)
                 if strand_val == -1:
                     cds_loc = CompoundLocation([loc2, loc1])

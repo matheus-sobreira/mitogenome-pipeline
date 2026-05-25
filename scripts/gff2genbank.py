@@ -107,8 +107,18 @@ def parse_gff(gff_path):
     return features
 
 
-def merge_nad3(features):
-    """Detect nad3_0 and nad3_1, merge into single nad3 with frameshift join."""
+def merge_nad3(features, transl_table=2):
+    """Detect nad3_0 and nad3_1, merge into single nad3 with frameshift join.
+
+    Em vertebrados (transl_table=2), o MITOS2 frequentemente reporta as duas
+    ORFs do ND3 com sobreposição de poucos nucleotídeos. A convenção do
+    GenBank para o programmed ribosomal frameshift descrito por Mindell et
+    al. (1998) --- observado em aves, tartarugas, crocodilianos e demais
+    vertebrados não-mamíferos --- é representar a junção como skip de 1 nt
+    (gap de 1 base entre os dois exons). Quando essa sobreposição é
+    detectada e o código genético é o vertebrado mitocondrial, as
+    coordenadas são ajustadas para o skip canônico antes da emissão do .tbl.
+    """
     nad3_parts = {}
     other = []
     for f in features:
@@ -130,6 +140,21 @@ def merge_nad3(features):
     first = p1 if p1["start"] <= p0["start"] else p0
     second = p0 if p1["start"] <= p0["start"] else p1
 
+    raw_coords = (first["start"], first["end"], second["start"], second["end"])
+
+    # Ajuste para skip-1 canônico (Mindell 1998) em vertebrados quando há overlap.
+    overlap = first["end"] - second["start"] + 1
+    if transl_table == 2 and overlap > 0:
+        adjusted_first_end = second["start"] - 2
+        join_coords = (first["start"], adjusted_first_end,
+                       second["start"], second["end"])
+        print(f"  ND3 overlap de {overlap} bp detectado; ajustado para skip-1 "
+              f"canônico (Mindell 1998): "
+              f"join({join_coords[0]}..{join_coords[1]},"
+              f"{join_coords[2]}..{join_coords[3]})")
+    else:
+        join_coords = raw_coords
+
     merged = {
         "seqid":  first["seqid"],
         "source": "mitos",
@@ -140,7 +165,7 @@ def merge_nad3(features):
         "phase":  "0",
         "attrs":  {"Name": "nad3", "ID": "gene_nad3"},
         "frameshift": True,
-        "join_coords": (first["start"], first["end"], second["start"], second["end"]),
+        "join_coords": join_coords,
     }
 
     # Insert merged nad3 and sort all by start position
@@ -300,7 +325,7 @@ def main():
     gene_features = [f for f in features if f["type"] in ("gene", "ncRNA_gene", "origin_of_replication")]
 
     # Merge nad3 frameshift
-    gene_features, nad3_merged = merge_nad3(gene_features)
+    gene_features, nad3_merged = merge_nad3(gene_features, transl_table=args.transl_table)
     if nad3_merged:
         print(f"  ND3 frameshift detectado: join({nad3_merged['join_coords'][0]}..{nad3_merged['join_coords'][1]},"
               f"{nad3_merged['join_coords'][2]}..{nad3_merged['join_coords'][3]})")
