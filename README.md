@@ -29,7 +29,7 @@ O pipeline foi aplicado a três espécies, cada uma com um papel distinto no des
 | Cobertura média | **176×** |
 | K-mer de circularização | 39 (1ª tentativa) |
 | Anotação | 13 CDS, 22 tRNA, 2 rRNA |
-| Identidade vs *A. hyacinthinus* | 99,924 % (Δ 13 bp) |
+| Identidade vs *A. hyacinthinus* | ~97 % nucleotídica; Δ 13 bp em tamanho total |
 | Tempo de execução | ~30 min (notebook i7, 16 GB RAM) |
 
 ### *Anodorhynchus hyacinthinus* (arara-azul-grande) — Validação cruzada
