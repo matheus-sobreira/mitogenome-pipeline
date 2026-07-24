@@ -1,0 +1,53 @@
+# Licença e Aviso de Uso — mitogenome-pipeline
+
+**PT:** Este pipeline destina-se a **USO ESTRITAMENTE ACADÊMICO E NÃO COMERCIAL**.
+**EN:** This pipeline is provided for **STRICTLY ACADEMIC, NON-COMMERCIAL USE**.
+
+© 2026 Matheus Sobreira Benevides.
+
+---
+
+## Por que uso não comercial
+
+O pipeline **orquestra ferramentas de terceiros**, cada uma sob sua própria licença.
+A ferramenta de montagem **NOVOPlasty** é licenciada **apenas para uso não
+comercial** e **não permite a distribuição de trabalhos derivados**. Como o
+pipeline — e as imagens Docker publicadas — dependem do NOVOPlasty e o incluem,
+**o conjunto só pode ser utilizado para fins acadêmicos e de pesquisa não
+comerciais**. Para uso comercial, é necessário obter uma licença comercial
+diretamente com o autor do NOVOPlasty (Nicolas Dierckxsens).
+
+## Código próprio (first-party)
+
+Os scripts de orquestração (Nextflow), os Dockerfiles e os scripts auxiliares
+(Python) de autoria de **Matheus Sobreira Benevides** são disponibilizados para
+uso acadêmico e de pesquisa, **sem garantia** (as is).
+
+## Ferramentas de terceiros e suas licenças
+
+| Ferramenta | Licença | Observação |
+|---|---|---|
+| SRA-Toolkit | Domínio público (NCBI) | uso livre |
+| Cutadapt | MIT | permissiva |
+| Nextflow | Apache 2.0 | permissiva |
+| Docker Engine | Apache 2.0 | permissiva |
+| Biopython | Biopython License (tipo BSD/MIT) | permissiva |
+| FastQC | GPL v3 | copyleft |
+| Trim Galore | GPL v3 | copyleft |
+| MITOS2 | GPL v3 | copyleft |
+| ViennaRNA (RNAplot) | Licença própria | permite uso comercial, **mas** exige crédito aos autores e proíbe redistribuição por taxa |
+| **NOVOPlasty** | **Licença própria — NÃO COMERCIAL** | **proíbe uso comercial e distribuição de derivados**; uso comercial requer licença do autor |
+
+Cada usuário é responsável por verificar e cumprir a licença vigente de cada
+ferramenta de terceiros junto à sua respectiva fonte oficial.
+
+## Imagens Docker
+
+As imagens publicadas em `ghcr.io/matheus-sobreira/mitogenome-pipeline/*` incluem
+as ferramentas acima e são fornecidas **"como estão" (as is)**, para uso
+acadêmico, **sem garantia e sem compromisso de atualização ou manutenção**.
+
+## Sem garantia
+
+O SOFTWARE É FORNECIDO NO ESTADO EM QUE SE ENCONTRA, SEM GARANTIAS DE QUALQUER
+NATUREZA, EXPRESSAS OU IMPLÍCITAS. O USO É DE INTEIRA RESPONSABILIDADE DO USUÁRIO.

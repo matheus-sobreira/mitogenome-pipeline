@@ -127,6 +127,28 @@ Para a lista completa com nomes de arquivo, ver a [Seção 6 do Guia de Execuç�
 
 ---
 
+## Licença e Uso
+
+> ⚠️ **USO ESTRITAMENTE ACADÊMICO E NÃO COMERCIAL** — *strictly for academic, non-commercial use.*
+
+Este pipeline orquestra ferramentas de terceiros, cada uma com sua própria licença. O montador **NOVOPlasty** é licenciado apenas para **uso não comercial** e não permite distribuição de trabalhos derivados; como o pipeline e as imagens Docker o incluem, **o conjunto destina-se exclusivamente a fins acadêmicos e de pesquisa não comerciais**. Para uso comercial, obtenha uma licença diretamente com o autor do NOVOPlasty.
+
+Os scripts próprios (Nextflow, Dockerfiles e Python) são disponibilizados para uso acadêmico, **sem garantia**. As imagens em `ghcr.io/matheus-sobreira/...` são fornecidas "como estão", sem compromisso de atualização.
+
+| Ferramenta | Licença |
+|---|---|
+| SRA-Toolkit | Domínio público (NCBI) |
+| Cutadapt | MIT |
+| Nextflow / Docker Engine | Apache 2.0 |
+| Biopython | Biopython License (tipo BSD/MIT) |
+| FastQC / Trim Galore / MITOS2 | GPL v3 |
+| ViennaRNA | Licença própria (crédito obrigatório; sem redistribuição paga) |
+| **NOVOPlasty** | **Licença própria — não comercial** |
+
+Detalhes completos em [`LICENSE`](LICENSE).
+
+---
+
 ## Referências
 
 - Dierckxsens, N. et al. (2017). NOVOPlasty. *Nucleic Acids Research*.

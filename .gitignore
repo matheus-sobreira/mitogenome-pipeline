@@ -28,6 +28,7 @@ __pycache__/
 
 # ── Arquivo de contexto local (apenas no PC, não versionar) ──────────────────
 CONTEXT.md
+docs/CONTEXTO_TCC.md
 
 # ── Sistema operacional ───────────────────────────────────────────────────────
 .DS_Store
