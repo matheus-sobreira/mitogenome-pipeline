@@ -12,10 +12,13 @@ Entregáveis gerados:
   06_gene_positions.tsv           — Tabela de posição física dos genes
   07_start_stop_codons.tsv        — Tabela de códons start/stop (CDS)
   08_trna_anticodons.tsv          — Tabela de anticódons dos tRNAs
-  09_genome_map.png               — Mapa linear do genoma (MITOS2)
+  09_circular_map.svg/.pdf        — Mapa circular do genoma (Biopython)
+  09b_genome_map_linear.png       — Mapa linear do genoma (MITOS2)
   10_annotation.gff               — Anotação GFF3 completa
   structure_svgs/                  — Estruturas secundárias (tRNA + rRNA)
   genbank_submission/              — Arquivos para submissão ao GenBank
+  13_gene_order.txt               — Ordem gênica linearizada
+  quality_plots/                   — Plots de qualidade da anotação MITOS2
 
 Uso:
     python3 compile_summary.py \\
