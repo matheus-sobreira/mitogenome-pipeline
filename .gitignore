@@ -57,3 +57,6 @@ docs/manual tcc uern.pdf
 
 # ── Logs e estado de execução (runtime, não versionar) ──────────────────────
 logs/*
+
+# Arquivos de trace do Nextflow gerados na raiz (-with-trace)
+trace_*.txt
