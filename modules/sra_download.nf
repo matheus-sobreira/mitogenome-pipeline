@@ -1,6 +1,13 @@
 /*
  * Módulo: SRA_DOWNLOAD
- * Baixa reads pareados de uma entrada do NCBI SRA usando fasterq-dump.
+ * Baixa reads pareados de uma entrada do NCBI SRA usando o SRA-Toolkit.
+ *
+ * Quando max_reads > 0, a extração é estratificada ao longo do run em vez de
+ * pegar os primeiros N spots (ver DEC-02 no vault). O custo é zero: o prefetch
+ * da etapa 1 já trouxe o .sra completo para o disco local, então extrair
+ * janelas espalhadas não adiciona nenhuma requisição de rede. Sem isso, a
+ * montagem continuaria alimentada pelo mesmo viés de localidade que o Pilot QC
+ * passou a corrigir.
  *
  * Entradas : acesso SRA (ex: 'SRR36152783'), max_reads (0 = baixar tudo)
  * Saídas   : tuple (sample_id, read1.fastq, read2.fastq)
@@ -14,19 +21,27 @@ process SRA_DOWNLOAD {
     errorStrategy 'retry'
     maxRetries    2
 
-    // Sem publishDir — reads brutos serão apagados após uso para economizar disco
+    // Só o plano de amostragem é publicado — reads brutos são apagados após uso
+    publishDir "${params.outdir}/qc/download", mode: 'copy', overwrite: true,
+               pattern: 'sampling_plan.txt'
 
     input:
     val accession
     val max_reads
+    path sampler
 
     output:
     tuple val(accession),
           path("${accession}_1.fastq"),
           path("${accession}_2.fastq"),
           emit: reads
+    path "sampling_plan.txt", optional: true, emit: plan
 
     script:
+    def mode     = params.sra_sampling ?: 'stratified'
+    def windows  = params.sra_windows  ?: 50
+    def seed_rng = params.pilot_seed   ?: 42
+
     """
     # Habilita SDL2 — necessário no SRA-Toolkit 3.x
     mkdir -p \$HOME/.ncbi
@@ -44,14 +59,17 @@ MKFG
 
     # Etapa 2: converte o .sra local para FASTQ
     if [ ${max_reads} -gt 0 ]; then
-        # fastq-dump com -X limita a extração aos primeiros N spots,
-        # evitando gravar o dataset inteiro em disco (crucial para metagenomas)
-        echo "Extraindo apenas ${max_reads} spots com fastq-dump -X..."
-        fastq-dump \\
+        # Amostragem estratificada sobre o .sra local — evita gravar o dataset
+        # inteiro em disco (crucial para metagenomas) sem herdar o viés de
+        # pegar só o início do run.
+        echo "Extraindo ${max_reads} spots (modo '${mode}', ${windows} janelas)..."
+        bash ${sampler} \\
             ${accession}/${accession}.sra \\
-            --split-files \\
-            -X ${max_reads} \\
-            --outdir .
+            ${accession} \\
+            ${max_reads} \\
+            ${mode} \\
+            ${windows} \\
+            ${seed_rng}
     else
         # Sem limite: usa fasterq-dump (mais rápido, multi-thread)
         fasterq-dump \\

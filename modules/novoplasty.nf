@@ -25,6 +25,7 @@ process NOVOPLASTY {
     tuple val(sample_id), path(read1), path(read2)
     path  seed
     val   read_len
+    val   max_mem
 
     output:
     path "*.fasta",    emit: assembly, optional: true
@@ -34,27 +35,17 @@ process NOVOPLASTY {
     script:
     def kmers = params.novoplasty_kmers ?: "${params.k_mer}"
     def max_iter = params.novoplasty_max_iterations ?: 3
-    def max_mem_param = params.max_memory
 
     """
     #!/bin/bash
     set -euo pipefail
 
-    # ── Auto-detecção de memória ────────────────────────────────────────
-    if [ "${max_mem_param}" = "null" ] || [ -z "${max_mem_param}" ]; then
-        MAX_MEM=\$(awk '/MemTotal/{
-            total_gb = \$2 / 1024 / 1024
-            half = int(total_gb * 0.5)
-            minus4 = int(total_gb - 4)
-            result = (half < minus4) ? half : minus4
-            if (result < 2) result = 2
-            print result
-        }' /proc/meminfo)
-        echo "=== Auto-detect: RAM total = \$(awk '/MemTotal/{printf \"%.1f\", \$2/1024/1024}' /proc/meminfo) GB, NOVOPlasty max = \$MAX_MEM GB ==="
-    else
-        MAX_MEM=${max_mem_param}
-        echo "=== Usando max_memory configurado: \$MAX_MEM GB ==="
-    fi
+    # Memória resolvida uma única vez no main.nf e compartilhada com o PILOT_QC,
+    # que precisa do mesmo valor para calcular a janela de intake (ver DEC-13).
+    # A auto-detecção que existia aqui foi promovida para lá; duas cópias da
+    # mesma regra divergiriam.
+    MAX_MEM=${max_mem}
+    echo "=== NOVOPlasty max memory = \$MAX_MEM GB (resolvido no main.nf) ==="
 
     ORIGINAL_SEED="${seed}"
     CIRCULARIZED=false
@@ -105,7 +96,10 @@ HP exclude list       =
 PCR-free              =
 EOF
 
-            perl /opt/novoplasty/NOVOPlasty4.3.1.pl -c config.txt
+            # Na imagem do BioContainers o script fica em /usr/local/bin e já
+            # está no PATH. Usamos o nome sem versão de propósito: a versão é
+            # declarada uma única vez, na tag do container (nextflow.config).
+            NOVOPlasty.pl -c config.txt
 
             # Circularizou?
             if find . -maxdepth 1 -name 'Circularized_assembly_*${sample_id}.fasta' | grep -q .; then

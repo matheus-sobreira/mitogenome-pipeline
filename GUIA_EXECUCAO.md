@@ -106,13 +106,14 @@ Se `sra_max_reads` não for definido, o Pilot QC roda automaticamente e calcula 
 ## 5. Fluxo do pipeline
 
 ```
-SRA_PILOT → SRA_DOWNLOAD → FASTQC → TRIM_GALORE → NOVOPLASTY → MITOS2 → COMPILE_SUMMARY
+SRA_PILOT_SAMPLE → PILOT_QC → SRA_DOWNLOAD → FASTQC → TRIM_GALORE → NOVOPLASTY → MITOS2 → COMPILE_SUMMARY
 ```
 
 | Etapa | Função |
 |---|---|
-| SRA_PILOT | Analisa 500K reads e calcula o volume ideal (opcional) |
-| SRA_DOWNLOAD | Baixa e trunca reads do NCBI SRA |
+| SRA_PILOT_SAMPLE | Amostra 500K reads distribuídos ao longo do run (opcional) |
+| PILOT_QC | Analisa a amostra e calcula o volume ideal de download |
+| SRA_DOWNLOAD | Baixa do NCBI SRA e amostra o volume definido |
 | FASTQC | Controle de qualidade |
 | TRIM_GALORE | Remoção de adaptadores e bases de baixa qualidade |
 | NOVOPLASTY | Montagem *de novo* por seed-and-extend |

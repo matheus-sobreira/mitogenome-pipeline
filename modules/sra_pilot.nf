@@ -1,36 +1,44 @@
 /*
- * Módulo: SRA_PILOT
- * Baixa uma amostra piloto de reads e analisa a qualidade para
- * determinar automaticamente o número ideal de reads (max_reads).
+ * Módulo: SRA_PILOT_SAMPLE
+ * Baixa a amostra piloto de reads que alimenta a análise do PILOT_QC.
  *
- * Usa fastq-dump -X, que baixa APENAS os N primeiros reads da origem,
- * sem transferir o dataset completo (diferente de fasterq-dump).
+ * Amostragem estratificada por padrão (params.pilot_sampling): em vez dos N
+ * primeiros spots do run, extrai N spots distribuídos em janelas equidistantes
+ * com deslocamento determinístico. Ver scripts/sra_sample.sh e DEC-01 no vault.
  *
- * Entradas : val(accession), path(seed)
- * Saídas   : env RECOMMENDED_READS  — número recomendado de reads
- *            path pilot_report.txt  — relatório detalhado da análise
+ * A análise vive em módulo separado (PILOT_QC) porque exige bwa/samtools, que
+ * não estão nesta imagem — e porque o split permite iterar na análise sem
+ * re-baixar a amostra (ver DEC-03).
+ *
+ * Entradas : val(accession)
+ * Saídas   : tuple(accession, R1, R2) — amostra piloto
+ *            path sampling_plan.txt   — janelas usadas, para reprodutibilidade
  */
 
-process SRA_PILOT {
+process SRA_PILOT_SAMPLE {
 
     tag "${accession}"
 
-    publishDir "${params.outdir}/qc/pilot", mode: 'copy', overwrite: true
+    publishDir "${params.outdir}/qc/pilot", mode: 'copy', overwrite: true,
+               pattern: 'sampling_plan.txt'
 
     input:
     val accession
-    path seed
+    path sampler
 
     output:
-    env RECOMMENDED_READS, emit: recommended_reads
-    env READ_LENGTH,       emit: read_length
-    path "pilot_report.txt", emit: report
+    tuple val(accession),
+          path("${accession}_1.fastq"),
+          path("${accession}_2.fastq"),
+          emit: reads
+    path "sampling_plan.txt", emit: plan
 
     script:
-    def pilot_n      = params.pilot_reads ?: 500000
-    def genome_range = params.genome_range
-    def target_cov   = params.target_coverage ?: 500
-    def mito_frac    = params.mito_fraction ?: 0
+    def pilot_n  = params.pilot_reads ?: 500000
+    def mode     = params.pilot_sampling ?: 'stratified'
+    def windows  = mode == 'dense' ? (params.pilot_dense_windows ?: 500)
+                                   : (params.pilot_windows ?: 10)
+    def seed_rng = params.pilot_seed ?: 42
 
     """
     # ── Configuração do SRA-Toolkit ──────────────────────────────────────
@@ -41,29 +49,14 @@ process SRA_PILOT {
 /repository/user/cache-disabled = "true"
 MKFG
 
-    echo "[PILOT] Baixando ${pilot_n} reads de amostra piloto..."
+    echo "[PILOT] Amostra piloto: ${pilot_n} reads, modo '${mode}'"
 
-    # fastq-dump -X limita NA ORIGEM (baixa apenas o necessário)
-    fastq-dump \\
-        -X ${pilot_n} \\
-        --split-files \\
-        --outdir . \\
-        ${accession}
-
-    # ── Análise de qualidade ─────────────────────────────────────────────
-    bash ${projectDir}/scripts/pilot_qc.sh \\
-        ${accession}_1.fastq \\
-        ${accession}_2.fastq \\
-        ${seed} \\
-        "${genome_range}" \\
-        ${target_cov} \\
-        ${mito_frac}
-
-    # Captura para output env do Nextflow
-    RECOMMENDED_READS=\$(cat recommended_reads.txt)
-    READ_LENGTH=\$(cat read_length.txt)
-
-    # Limpeza — pilot reads não são necessários no futuro
-    rm -f ${accession}_1.fastq ${accession}_2.fastq
+    bash ${sampler} \\
+        ${accession} \\
+        ${accession} \\
+        ${pilot_n} \\
+        ${mode} \\
+        ${windows} \\
+        ${seed_rng}
     """
 }
