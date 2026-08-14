@@ -31,53 +31,24 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation, CompoundLocation
 
-# ── Nomes padronizados para GenBank ──────────────────────────────────────────
+# ── Anotação corrigida ───────────────────────────────────────────────────────
+#
+# Os nomes padronizados e — sobretudo — a lógica de correção da saída bruta do
+# MITOS2 (frameshift do ND3, fragmentos espúrios, extremidades truncadas,
+# região controle) vivem em `gff2genbank.py`. Este módulo NÃO deve reimplementar
+# nada disso: manter duas cópias da mesma lógica já fez o `.gbk` divergir do
+# `.tbl` de submissão.
 
-GENE_PRODUCT = {
-    "nad1":  ("ND1",  "NADH dehydrogenase subunit 1"),
-    "nad2":  ("ND2",  "NADH dehydrogenase subunit 2"),
-    "nad3":  ("ND3",  "NADH dehydrogenase subunit 3"),
-    "nad4":  ("ND4",  "NADH dehydrogenase subunit 4"),
-    "nad4l": ("ND4L", "NADH dehydrogenase subunit 4L"),
-    "nad5":  ("ND5",  "NADH dehydrogenase subunit 5"),
-    "nad6":  ("ND6",  "NADH dehydrogenase subunit 6"),
-    "cox1":  ("COX1", "cytochrome c oxidase subunit I"),
-    "cox2":  ("COX2", "cytochrome c oxidase subunit II"),
-    "cox3":  ("COX3", "cytochrome c oxidase subunit III"),
-    "atp6":  ("ATP6", "ATP synthase F0 subunit 6"),
-    "atp8":  ("ATP8", "ATP synthase F0 subunit 8"),
-    "cob":   ("CYTB", "cytochrome b"),
-}
-
-TRNA_PRODUCT = {
-    "trnF":  ("trnF",  "tRNA-Phe"),
-    "trnV":  ("trnV",  "tRNA-Val"),
-    "trnL2": ("trnL2", "tRNA-Leu"),
-    "trnL1": ("trnL1", "tRNA-Leu"),
-    "trnI":  ("trnI",  "tRNA-Ile"),
-    "trnQ":  ("trnQ",  "tRNA-Gln"),
-    "trnM":  ("trnM",  "tRNA-Met"),
-    "trnW":  ("trnW",  "tRNA-Trp"),
-    "trnA":  ("trnA",  "tRNA-Ala"),
-    "trnN":  ("trnN",  "tRNA-Asn"),
-    "trnC":  ("trnC",  "tRNA-Cys"),
-    "trnY":  ("trnY",  "tRNA-Tyr"),
-    "trnS2": ("trnS2", "tRNA-Ser"),
-    "trnS1": ("trnS1", "tRNA-Ser"),
-    "trnD":  ("trnD",  "tRNA-Asp"),
-    "trnK":  ("trnK",  "tRNA-Lys"),
-    "trnG":  ("trnG",  "tRNA-Gly"),
-    "trnR":  ("trnR",  "tRNA-Arg"),
-    "trnH":  ("trnH",  "tRNA-His"),
-    "trnT":  ("trnT",  "tRNA-Thr"),
-    "trnP":  ("trnP",  "tRNA-Pro"),
-    "trnE":  ("trnE",  "tRNA-Glu"),
-}
-
-RRNA_PRODUCT = {
-    "rrnS": ("rrnS", "s-rRNA", "12S ribosomal RNA"),
-    "rrnL": ("rrnL", "l-rRNA", "16S ribosomal RNA"),
-}
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from gff2genbank import (  # noqa: E402
+    GENE_PRODUCT,
+    TRNA_PRODUCT,
+    RRNA_PRODUCT,
+    base_gene_name,
+    build_annotation,
+    organism_to_seqid,
+    validate_cds,
+)
 
 # Cores para o mapa circular (por categoria funcional)
 COLOR_CDS_NADH  = "#4CAF50"   # Verde — Complex I (NADH dehydrogenase)
@@ -87,14 +58,6 @@ COLOR_CDS_CYTB  = "#F44336"   # Vermelho — Complex III (cytochrome b)
 COLOR_TRNA      = "#9C27B0"   # Roxo — tRNAs
 COLOR_RRNA      = "#795548"   # Marrom — rRNAs
 COLOR_DLOOP     = "#607D8B"   # Cinza — D-loop / control region
-
-def organism_to_seqid(organism):
-    """Convert organism name to a short sequence ID. e.g. 'Anodorhynchus leari' → 'A_leari'."""
-    parts = organism.strip().split()
-    if len(parts) >= 2:
-        return f"{parts[0][0]}_{parts[1]}"
-    return organism.replace(" ", "_")
-
 
 def get_cds_color(gene_symbol):
     """Return color based on gene function."""
@@ -107,36 +70,6 @@ def get_cds_color(gene_symbol):
     elif gene_symbol == "CYTB":
         return COLOR_CDS_CYTB
     return "#9E9E9E"
-
-
-def parse_gff(gff_path):
-    """Parse MITOS2 GFF3, returning a list of feature dicts."""
-    features = []
-    with open(gff_path) as fh:
-        for line in fh:
-            line = line.strip()
-            if not line or line.startswith("#"):
-                continue
-            cols = line.split("\t")
-            if len(cols) < 9:
-                continue
-            seqid, source, ftype, start, end, score, strand, phase, attrs_str = cols
-            attrs = {}
-            for pair in attrs_str.split(";"):
-                if "=" in pair:
-                    k, v = pair.split("=", 1)
-                    attrs[k] = v
-            features.append({
-                "seqid":  seqid,
-                "source": source,
-                "type":   ftype,
-                "start":  int(start),
-                "end":    int(end),
-                "strand": strand,
-                "phase":  phase,
-                "attrs":  attrs,
-            })
-    return features
 
 
 def read_fasta(fasta_path):
@@ -153,8 +86,14 @@ def read_fasta(fasta_path):
     return seqid, "".join(seq_parts)
 
 
-def build_genbank_record(gff_features, seqid, sequence, organism, transl_table, topology):
-    """Build a BioPython SeqRecord with GenBank features from MITOS2 GFF3."""
+def build_genbank_record(ann, seqid, organism, transl_table, topology):
+    """Monta o SeqRecord a partir da anotação já corrigida (`build_annotation`).
+
+    Recebe o dicionário devolvido por `gff2genbank.build_annotation`, de modo
+    que o `.gbk` e o mapa circular reflitam exatamente as mesmas coordenadas do
+    `.tbl` de submissão.
+    """
+    sequence = ann["seq"]
 
     record = SeqRecord(
         Seq(sequence),
@@ -179,128 +118,84 @@ def build_genbank_record(gff_features, seqid, sequence, organism, transl_table, 
     source_feat.qualifiers["mol_type"] = ["genomic DNA"]
     record.features.append(source_feat)
 
-    # Collect gene-level features
-    gene_features = [f for f in gff_features
-                     if f["type"] in ("gene", "ncRNA_gene", "origin_of_replication")]
+    # ── D-loop / região controle ──
+    # Pode vir em duas partes quando cruza a origem das coordenadas.
+    dloop_parts = ann["dloop_parts"]
+    if dloop_parts:
+        locs = [FeatureLocation(a - 1, b, strand=1) for (a, b) in dloop_parts]
+        dloop_loc = locs[0] if len(locs) == 1 else CompoundLocation(locs)
+        dloop_feat = SeqFeature(dloop_loc, type="D-loop")
+        dloop_feat.qualifiers["note"] = ["control region"]
+        record.features.append(dloop_feat)
 
-    # Detect nad3 frameshift
-    nad3_parts = {}
-    for f in gene_features:
-        name = f["attrs"].get("Name", "")
-        if name in ("nad3_0", "nad3_1"):
-            nad3_parts[name] = f
-
-    # Process each feature
-    processed_nad3 = False
-    for f in sorted(gene_features, key=lambda x: x["start"]):
-        name = f["attrs"].get("Name", "")
-        base_name = re.sub(r"_\d+$", "", name)
+    # ── CDS ──
+    for f in ann["cds_feats"]:
+        gene_sym, product = GENE_PRODUCT[base_gene_name(f["attrs"].get("Name", ""))]
         strand_val = -1 if f["strand"] == "-" else 1
+        parts = f["parts"]
 
-        # GFF is 1-based inclusive; BioPython is 0-based half-open
-        start_0 = f["start"] - 1
-        end_0 = f["end"]
+        # GFF é 1-based inclusivo; BioPython é 0-based semiaberto
+        gene_loc = FeatureLocation(parts[0][0] - 1, parts[-1][1], strand=strand_val)
+        gene_feat = SeqFeature(gene_loc, type="gene")
+        gene_feat.qualifiers["gene"] = [gene_sym]
+        record.features.append(gene_feat)
 
-        # ── nad3 frameshift ──
-        if name in ("nad3_0", "nad3_1"):
-            if processed_nad3:
-                continue
-            if "nad3_0" in nad3_parts and "nad3_1" in nad3_parts:
-                processed_nad3 = True
-                p0 = nad3_parts["nad3_0"]
-                p1 = nad3_parts["nad3_1"]
-                first = p1 if p1["start"] <= p0["start"] else p0
-                second = p0 if p1["start"] <= p0["start"] else p1
+        locs = [FeatureLocation(a - 1, b, strand=strand_val) for (a, b) in parts]
+        if strand_val == -1:
+            locs = list(reversed(locs))
+        cds_loc = locs[0] if len(locs) == 1 else CompoundLocation(locs)
 
-                # Ajuste para skip-1 canônico (Mindell 1998) em vertebrados
-                # quando o MITOS2 reporta as duas ORFs com sobreposição. O
-                # programmed ribosomal frameshift do ND3 em aves, tartarugas,
-                # crocodilianos e demais vertebrados não-mamíferos é
-                # representado no GenBank como gap de 1 nt entre os exons.
-                first_end = first["end"]
-                overlap = first["end"] - second["start"] + 1
-                if int(transl_table) == 2 and overlap > 0:
-                    first_end = second["start"] - 2
-                    print(f"  ND3 overlap de {overlap} bp detectado; ajustado "
-                          f"para skip-1 canônico (Mindell 1998): "
-                          f"join({first['start']}..{first_end},"
-                          f"{second['start']}..{second['end']})")
+        cds_feat = SeqFeature(cds_loc, type="CDS")
+        cds_feat.qualifiers["gene"] = [gene_sym]
+        cds_feat.qualifiers["product"] = [product]
+        cds_feat.qualifiers["transl_table"] = [transl_table]
 
-                # Gene spanning full range
-                gene_loc = FeatureLocation(first["start"] - 1, second["end"], strand=strand_val)
-                gene_feat = SeqFeature(gene_loc, type="gene")
-                gene_feat.qualifiers["gene"] = ["ND3"]
-                record.features.append(gene_feat)
+        notes = []
+        if f.get("partial_stop"):
+            a, b = f["partial_stop"]
+            pos = f"{a}" if a == b else f"{a}..{b}"
+            if strand_val == -1:
+                pos = f"complement({pos})"
+            cds_feat.qualifiers["transl_except"] = [f"(pos:{pos},aa:TERM)"]
+            notes.append("TAA stop codon is completed by the addition of "
+                         "3' A residues to the mRNA")
+        if f.get("frameshift"):
+            cds_feat.qualifiers["exception"] = ["ribosomal slippage"]
+            notes.append("programmed frameshift; frameshift mechanism unknown "
+                         "(Mindell et al., 1998, Mol. Biol. Evol., 15:1568-1571)")
+        if notes:
+            cds_feat.qualifiers["note"] = notes
 
-                # CDS with join (CompoundLocation)
-                loc1 = FeatureLocation(first["start"] - 1, first_end, strand=strand_val)
-                loc2 = FeatureLocation(second["start"] - 1, second["end"], strand=strand_val)
-                if strand_val == -1:
-                    cds_loc = CompoundLocation([loc2, loc1])
-                else:
-                    cds_loc = CompoundLocation([loc1, loc2])
-                cds_feat = SeqFeature(cds_loc, type="CDS")
-                cds_feat.qualifiers["gene"] = ["ND3"]
-                cds_feat.qualifiers["product"] = ["NADH dehydrogenase subunit 3"]
-                cds_feat.qualifiers["transl_table"] = [transl_table]
-                cds_feat.qualifiers["exception"] = ["ribosomal slippage"]
-                cds_feat.qualifiers["note"] = [
-                    "programmed frameshift; frameshift mechanism unknown "
-                    "(Mindell et al., 1998, Mol. Biol. Evol., 15:1568-1571)"
-                ]
-                record.features.append(cds_feat)
-                continue
+        record.features.append(cds_feat)
 
-        # ── CDS (protein-coding) ──
-        if base_name in GENE_PRODUCT:
-            gene_sym, product = GENE_PRODUCT[base_name]
-            loc = FeatureLocation(start_0, end_0, strand=strand_val)
+    # ── tRNA e rRNA ──
+    for f in ann["rna_feats"]:
+        name = base_gene_name(f["attrs"].get("Name", ""))
+        strand_val = -1 if f["strand"] == "-" else 1
+        loc = FeatureLocation(f["start"] - 1, f["end"], strand=strand_val)
 
-            gene_feat = SeqFeature(loc, type="gene")
-            gene_feat.qualifiers["gene"] = [gene_sym]
-            record.features.append(gene_feat)
+        if name in TRNA_PRODUCT:
+            gene_sym, product, anticodon = TRNA_PRODUCT[name]
+            rna_type = "tRNA"
+        elif name in RRNA_PRODUCT:
+            gene_sym, product = RRNA_PRODUCT[name]
+            anticodon = None
+            rna_type = "rRNA"
+        else:
+            continue
 
-            cds_feat = SeqFeature(loc, type="CDS")
-            cds_feat.qualifiers["gene"] = [gene_sym]
-            cds_feat.qualifiers["product"] = [product]
-            cds_feat.qualifiers["transl_table"] = [transl_table]
-            record.features.append(cds_feat)
+        gene_feat = SeqFeature(loc, type="gene")
+        gene_feat.qualifiers["gene"] = [gene_sym]
+        record.features.append(gene_feat)
 
-        # ── tRNA ──
-        elif base_name in TRNA_PRODUCT:
-            gene_sym, product = TRNA_PRODUCT[base_name]
-            loc = FeatureLocation(start_0, end_0, strand=strand_val)
+        rna_feat = SeqFeature(loc, type=rna_type)
+        rna_feat.qualifiers["gene"] = [gene_sym]
+        rna_feat.qualifiers["product"] = [product]
+        if anticodon:
+            rna_feat.qualifiers["note"] = [f"anticodon:{anticodon}"]
+        record.features.append(rna_feat)
 
-            gene_feat = SeqFeature(loc, type="gene")
-            gene_feat.qualifiers["gene"] = [gene_sym]
-            record.features.append(gene_feat)
-
-            trna_feat = SeqFeature(loc, type="tRNA")
-            trna_feat.qualifiers["gene"] = [gene_sym]
-            trna_feat.qualifiers["product"] = [product]
-            record.features.append(trna_feat)
-
-        # ── rRNA ──
-        elif base_name in RRNA_PRODUCT:
-            gene_sym, display, product = RRNA_PRODUCT[base_name]
-            loc = FeatureLocation(start_0, end_0, strand=strand_val)
-
-            gene_feat = SeqFeature(loc, type="gene")
-            gene_feat.qualifiers["gene"] = [gene_sym]
-            record.features.append(gene_feat)
-
-            rrna_feat = SeqFeature(loc, type="rRNA")
-            rrna_feat.qualifiers["gene"] = [gene_sym]
-            rrna_feat.qualifiers["product"] = [product]
-            record.features.append(rrna_feat)
-
-        # ── D-loop / origin of replication ──
-        elif name.startswith("OH"):
-            loc = FeatureLocation(start_0, end_0, strand=strand_val)
-            dloop_feat = SeqFeature(loc, type="D-loop")
-            dloop_feat.qualifiers["note"] = ["control region"]
-            record.features.append(dloop_feat)
-
+    record.features.sort(key=lambda x: (int(x.location.start), x.type != "gene"))
     return record
 
 
@@ -410,17 +305,14 @@ def main():
 
     os.makedirs(args.outdir, exist_ok=True)
 
-    # Read sequence
-    _, sequence = read_fasta(args.fasta)
     seqid = args.seqid if args.seqid else organism_to_seqid(args.organism)
 
-    # Parse GFF
-    gff_features = parse_gff(args.gff)
+    # Anotação corrigida — mesma fonte que alimenta o .tbl de submissão
+    ann = build_annotation(args.gff, args.fasta, args.transl_table)
+    sequence = ann["seq"]
 
-    # Build GenBank record
     record = build_genbank_record(
-        gff_features, seqid, sequence,
-        args.organism, args.transl_table, args.topology
+        ann, seqid, args.organism, args.transl_table, args.topology
     )
 
     # Write GenBank flat file
@@ -441,6 +333,17 @@ def main():
     print(f"  tRNAs:        {trna_count}")
     print(f"  rRNAs:        {rrna_count}")
     print(f"  D-loop:       {dloop_count}")
+
+    if ann["log"]:
+        print(f"\n  Correções aplicadas sobre a anotação bruta do MITOS2:")
+        for item in ann["log"]:
+            print(f"    · {item}")
+
+    problems = validate_cds(ann["cds_feats"], sequence)
+    if problems:
+        print(f"\n  ATENÇÃO — problemas remanescentes:")
+        for p in problems:
+            print(f"    ! {p}")
 
     # Draw circular map
     if not args.no_map:
