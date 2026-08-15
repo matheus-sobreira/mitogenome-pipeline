@@ -36,6 +36,10 @@ process SRA_DOWNLOAD {
           path("${accession}_2.fastq"),
           emit: reads
     path "sampling_plan.txt", optional: true, emit: plan
+    // .sra preservado quando a rearbitragem está ativa (DEC-22): o re-sorteio
+    // do pool extrai janelas novas dele SEM tocar a rede. Symlink downstream,
+    // sem cópia — custo é só o disco do work dir até a limpeza.
+    path "${accession}.sra", optional: true, emit: sra
 
     script:
     def mode     = params.sra_sampling ?: 'stratified'
@@ -81,7 +85,11 @@ MKFG
             --disk-limit unlimited
     fi
 
-    # Libera espaço: apaga o diretório .sra (não é mais necessário)
+    # Rearbitragem ativa: preserva o .sra para re-sorteio de pool sem rede.
+    # Inativa: apaga, como antes (libera ~10 GB).
+    if [ "${params.assembly_retry != false ? 'keep' : 'drop'}" = "keep" ] && [ ${max_reads} -gt 0 ]; then
+        mv ${accession}/${accession}.sra ./${accession}.sra
+    fi
     rm -rf ${accession}
     """
 }

@@ -19,6 +19,12 @@ process SRA_PILOT_SAMPLE {
 
     tag "${accession}"
 
+    // Janelas remotas dependem dos serviços do SRA, que falham transitoriamente
+    // (mesma razão do retry no SRA_DOWNLOAD). O sampler já retenta por janela;
+    // isto é o backstop no nível do processo.
+    errorStrategy 'retry'
+    maxRetries    2
+
     publishDir "${params.outdir}/qc/pilot", mode: 'copy', overwrite: true,
                pattern: 'sampling_plan.txt'
 

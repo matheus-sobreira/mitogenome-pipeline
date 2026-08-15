@@ -147,12 +147,36 @@ while IFS=$'\t' read -r START END; do
     rm -rf "win_${WIN_IDX}"
     mkdir -p "win_${WIN_IDX}"
 
-    fastq-dump \
-        -N "$START" \
-        -X "$END" \
-        --split-files \
-        --outdir "win_${WIN_IDX}" \
-        "$SOURCE"
+    # Retentativa POR JANELA: os serviços do SRA falham transitoriamente
+    # ("Failed to call external services" — 2 ocorrências em 14/08/2026) e,
+    # sem isto, uma janela perdida derruba a extração inteira. Backoff
+    # crescente; a última tentativa deixa o erro propagar (set -e).
+    FETCH_OK=0
+    for TRY in 1 2 3; do
+        # --split-3 (não --split-files): um read só entra em _1/_2 se AMBOS os
+        # mates existirem; singletons vão para <acc>.fastq (sem sufixo _N),
+        # ignorado pelo glob abaixo. Isso mantém _1 e _2 SEMPRE sincronizados.
+        # Com --split-files, spots com um mate só (comuns em dado de captura,
+        # ex.: SRR14323300) desalinham _1/_2 e o bwa aborta lá na frente
+        # ("paired reads have different names"). --skip-technical descarta
+        # leituras técnicas (adaptadores/barcodes).
+        if fastq-dump \
+            -N "$START" \
+            -X "$END" \
+            --split-3 \
+            --skip-technical \
+            --outdir "win_${WIN_IDX}" \
+            "$SOURCE"; then
+            FETCH_OK=1
+            break
+        fi
+        echo "[SAMPLE]   janela ${WIN_IDX}: tentativa ${TRY}/3 falhou; aguardando $(( TRY * 20 ))s" >&2
+        sleep $(( TRY * 20 ))
+    done
+    if [[ "$FETCH_OK" -ne 1 ]]; then
+        echo "[SAMPLE] ERRO: janela ${WIN_IDX} falhou após 3 tentativas." >&2
+        exit 1
+    fi
 
     # --split-files nomeia pelo acesso, não pelo prefixo pedido
     for MATE in 1 2; do
@@ -169,7 +193,16 @@ while IFS=$'\t' read -r START END; do
 done < sampling_plan.txt
 
 OBTAINED=$(awk 'END{printf "%d", NR/4}' "${PREFIX}_1.fastq")
-echo "[SAMPLE] Reads obtidos (R1): ${OBTAINED}" >&2
+OBTAINED_R2=$(awk 'END{printf "%d", NR/4}' "${PREFIX}_2.fastq")
+echo "[SAMPLE] Reads obtidos: R1=${OBTAINED} R2=${OBTAINED_R2}" >&2
+
+# Guarda de sincronia: R1 e R2 têm de ter o mesmo número de reads. Com --split-3
+# isto deve valer sempre; a checagem existe para um descompasso futuro falhar
+# aqui, com mensagem clara, em vez de virar um erro obscuro do bwa/montador.
+if [[ "$OBTAINED" -ne "$OBTAINED_R2" ]]; then
+    echo "[SAMPLE] ERRO: R1 (${OBTAINED}) e R2 (${OBTAINED_R2}) dessincronizados." >&2
+    exit 1
+fi
 
 if [[ "$OBTAINED" -eq 0 ]]; then
     echo "[SAMPLE] ERRO: nenhuma read extraída." >&2

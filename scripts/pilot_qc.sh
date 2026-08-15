@@ -110,6 +110,15 @@ MAPPED_READS="N/A"
 DIVERGENCE_PCT="N/A"
 REF_LEN="N/A"
 
+# ── Limite de resolução de repeats (DEC-21) — defaults ─────────────────────
+# Preenchidos no ramo de mapeamento; sem mapeamento (fração fornecida pelo
+# usuário) a seção sai como "não medido".
+INSERT_AVG="N/A"
+RESOLUTION_LIMIT="$AVG_READ_LEN"
+TANDEM_TABLE="    (não executada — sem mapeamento nesta rodada)"
+TANDEM_RISK=0
+TANDEM_RISK_LINES=""
+
 if [[ "$MITO_FRAC_OVERRIDE" != "0" ]] && [[ "$MITO_FRAC_OVERRIDE" != "0.0" ]]; then
     MITO_FRACTION="$MITO_FRAC_OVERRIDE"
     MITO_SOURCE="fornecido pelo usuário"
@@ -185,6 +194,65 @@ else
         MITO_SOURCE="mapeamento bwa contra mitogenoma completo (${REF_LEN} bp)"
     else
         MITO_SOURCE="mapeamento bwa contra seed de ${REF_LEN} bp, escalado para ${GENOME_AVG} bp"
+    fi
+
+    # ── Limite de resolução de repeats (DEC-21) ─────────────────────────────
+    # Insert REAL, medido nos pares mitocondriais do próprio piloto — não o
+    # parâmetro de config. Em A. leari: 140 bp medidos contra 300 configurados.
+    INSERT_AVG=$(samtools stats pilot.bam 2>/dev/null \
+        | awk -F'\t' '/^SN\tinsert size average:/{printf "%.0f", $3}')
+    [[ -n "$INSERT_AVG" ]] || INSERT_AVG=0
+
+    # O que a biblioteca alcança é o maior entre insert e read (pares muito
+    # curtos se sobrepõem e o read inteiro é o span efetivo).
+    RESOLUTION_LIMIT=$(awk -v i="$INSERT_AVG" -v r="$AVG_READ_LEN" \
+        'BEGIN{printf "%d", (i > r) ? i : r}')
+
+    # Varredura de tandem na REFERÊNCIA: períodos estáveis entre reocorrências
+    # do mesmo 15-mer. Só enxerga repeats REPRESENTADOS (≥2 cópias) — um VNTR
+    # colapsado na referência é invisível aqui (medido: o VNTR de A. leari não
+    # aparece no congênere NC_082165.1); quem cobre esse caso é a validação
+    # pós-montagem (DEC-20). Profundidade-sobre-congênere foi testada e
+    # descartada como sinal: a divergência interespecífica varia por região e
+    # gera razões de até 2,2× em loci conservados (falso positivo) enquanto o
+    # locus real do VNTR ficou em 1,44×.
+    awk -v k=15 -v minu=50 -v maxu=2000 '
+        !/^>/ { seq = seq toupper($0) }
+        END {
+            L = length(seq)
+            for (i = 1; i <= L - k + 1; i++) {
+                km = substr(seq, i, k)
+                if (km in last) {
+                    d = i - last[km]
+                    if (d >= minu && d <= maxu) {
+                        if (open && i - rend <= 3*k && d - runit < 6 && runit - d < 6) {
+                            rend = i; rn++
+                        } else {
+                            if (open && rn >= 5)
+                                printf "%d\t%d\t%d\t%d\n", rstart, rend + k, runit, rn
+                            rstart = i; rend = i; runit = d; rn = 1; open = 1
+                        }
+                    }
+                }
+                last[km] = i
+            }
+            if (open && rn >= 5)
+                printf "%d\t%d\t%d\t%d\n", rstart, rend + k, runit, rn
+        }' "$REF_LOCAL" > tandem_scan.tsv
+
+    if [[ -s tandem_scan.tsv ]]; then
+        TANDEM_TABLE=$(awk -F'\t' -v lim="$RESOLUTION_LIMIT" '{
+            v = ($3 >= lim) ? "⚠ INDECIDÍVEL" : "resolvível"
+            printf "    locus %5d–%-5d  unidade ~%d bp  (%d k-mers)  %s\n", $1, $2, $3, $4, v
+        }' tandem_scan.tsv | head -8)
+        TANDEM_RISK=$(awk -F'\t' -v lim="$RESOLUTION_LIMIT" '$3 >= lim {n++} END{print n+0}' tandem_scan.tsv)
+        if [[ "$TANDEM_RISK" -gt 0 ]]; then
+            TANDEM_RISK_LINES=$(awk -F'\t' -v lim="$RESOLUTION_LIMIT" '$3 >= lim {
+                printf "    unidade ~%d bp no locus %d–%d da referência\n", $3, $1, $2
+            }' tandem_scan.tsv | head -4)
+        fi
+    else
+        TANDEM_TABLE="    nenhum tandem (unidade 50–2000 bp) representado na referência"
     fi
 fi
 
@@ -296,6 +364,15 @@ if awk -v cm="$COV_MAX" -v tc="$TARGET_COV" 'BEGIN{exit !(cm < tc)}'; then
 "
 fi
 
+if [[ "$TANDEM_RISK" -gt 0 ]]; then
+    ALERTS="${ALERTS}  ⚠ RISCO DE VNTR INDECIDÍVEL detectado ANTES da montagem:
+${TANDEM_RISK_LINES}
+    A unidade é ≥ limite de resolução da biblioteca (~${RESOLUTION_LIMIT} bp): o
+    número de cópias na montagem será uma escolha do montador, não dos dados.
+    A validação pós-montagem (DEC-20) arbitrará.
+"
+fi
+
 if [[ -z "$ALERTS" ]]; then
     ALERTS="  ✓ Recomendação derivada da medição, sem limites aplicados.
 "
@@ -329,6 +406,18 @@ cat > pilot_report.txt << REPORT
   alta sugere seed distante do táxon; breadth e fração baixos com
   divergência normal sugerem pouco mtDNA no dataset. Nenhum filtro de
   MAPQ é aplicado — reads de NUMTs não são discriminados nesta etapa.
+
+── Limite de Resolução de Repeats (pré-montagem, DEC-21) ──────────
+  Insert médio MEDIDO:       ${INSERT_AVG} bp (pares mitocondriais do piloto)
+  Limite de resolução:       ~${RESOLUTION_LIMIT} bp — tandems com unidade acima
+                             disso têm número de cópias INDECIDÍVEL por esta
+                             biblioteca, em qualquer cobertura
+  Tandems representados na referência:
+${TANDEM_TABLE}
+
+  A varredura enxerga só o que a referência representa (≥2 cópias); um VNTR
+  colapsado nela é invisível aqui. Cobertura desse caso: validação
+  pós-montagem (DEC-20), que arbitra por razão de profundidade.
 
 ── Parâmetros da Montagem ─────────────────────────────────────────
   Genoma estimado:           ${GENOME_AVG} bp

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Pipeline de bioinformática (Nextflow DSL2 + Docker) para montagem *de novo* e anotação automatizada de genomas mitocondriais a partir de dados públicos do NCBI SRA. É o produto do TCC (Bacharelado em Ciência da Computação, UERN) de Matheus Sobreira Benevides, aplicado à arara-azul-de-lear (*Anodorhynchus leari*).
 
-Fluxo: `SRA_PILOT_SAMPLE → PILOT_QC → SRA_DOWNLOAD → FASTQC → TRIM_GALORE → NOVOPLASTY → MITOS2 → COMPILE_SUMMARY`.
+Fluxo: `SRA_PILOT_SAMPLE → PILOT_QC → SRA_DOWNLOAD → FASTQC → TRIM_GALORE → NOVOPLASTY → ASSEMBLY_VALIDATION → [se ALERTA: RESAMPLE_POOL → TRIM_GALORE_RETRY → NOVOPLASTY_RETRY → ASSEMBLY_VALIDATION_RETRY] → MITOS2 → COMPILE_SUMMARY` (a anotação recebe a montagem **arbitrada**).
 
 ## Comandos
 
@@ -24,7 +24,8 @@ nextflow run main.nf -profile a_leari
 # Retomar execução interrompida (usa cache do work/ daquele run)
 nextflow run main.nf -profile a_leari -resume -w work/a_leari/2026-04-12_14h30
 
-# Pular o Pilot QC e forçar um número de reads
+# Forçar um número de reads (pula a ANÁLISE do piloto; a AMOSTRA piloto ainda é
+# coletada, porque a validação pós-montagem a reutiliza — DEC-20)
 nextflow run main.nf -profile a_leari --sra_max_reads 20000000
 
 # Acompanhar execução em andamento
@@ -54,8 +55,10 @@ Para rodar apenas um script Python de pós-processamento isoladamente (fora do N
 **`modules/*.nf`** — um processo Nextflow por etapa, cada um fixado (`container =`) a uma das 6 imagens Docker em `nextflow.config`. Pontos não óbvios:
 - A etapa 0 são **dois** processos: `sra_pilot.nf` (`SRA_PILOT_SAMPLE`, imagem `sra-tools`) baixa a amostra, e `pilot_qc.nf` (`PILOT_QC`, imagem `pilot-qc`) a analisa. Estão separados porque a análise precisa de bwa/samtools e porque assim o `-resume` permite iterar na análise sem re-baixar a amostra.
 - `sra_download.nf` usa `fasterq-dump` para o dataset completo (`sra_max_reads` ausente) e `scripts/sra_sample.sh` sobre o `.sra` já baixado pelo `prefetch` quando há limite — não são intercambiáveis.
-- **Amostragem**: tanto o piloto quanto o download usam `scripts/sra_sample.sh`, que extrai janelas equidistantes ao longo do run em vez dos primeiros N spots. Os modos (`head`/`stratified`/`dense`), o número de janelas e a semente são parâmetros. `head` reproduz o comportamento anterior à mudança e existe para comparação A/B — não o remova.
+- **Amostragem**: piloto e download usam `scripts/sra_sample.sh` (modos `head`/`stratified`/`dense`), mas com propósitos opostos — **o piloto é `stratified`** (a medição da fração precisa ser representativa) e **o download é `head`/contíguo** (DEC-23). Estratificar o download interage com a janela de intake do NOVOPlasty e desestabiliza a resolução de repeats em tandem (medido: 8M estratificado → VNTR superexpandido 18.058 bp; 8M contíguo → 16.986 bp correto). `stratified` no download permanece para comparação A/B — não o remova.
 - `novoplasty.nf` filtra a saída do NOVOPlasty por `fasta.name.startsWith('Circularized_assembly')` em `main.nf`; montagens não circularizadas não seguem para MITOS2/COMPILE_SUMMARY (ver `workflow.onComplete` em `main.nf`, que reporta status `INCOMPLETO` nesse caso).
+- `assembly_validation.nf` (imagem `pilot-qc`) mapeia a **amostra piloto** de volta contra a montagem circularizada e sinaliza regiões com razão de profundidade fora de `[validation_ratio_low, validation_ratio_high]`×mediana: razão baixa = repeat superexpandido na montagem, alta = repeat colapsado. Existe porque **circular ≠ correto**: uma montagem de *A. leari* circularizou com um VNTR de ~298 bp da região controle superexpandido em ~1 kb, dentro do `genome_range` (ver DEC-20 no vault). Por isso `SRA_PILOT_SAMPLE` roda mesmo com `--sra_max_reads` forçado; desativa-se com `--assembly_validation false`. Alerta exige ≥2 janelas consecutivas (isoladas são viés de cobertura, viram observação).
+- **Rearbitragem (DEC-22)**: com `assembly_retry = true` (padrão), um ALERTA dispara re-sorteio do pool a partir do `.sra` (que o `SRA_DOWNLOAD` passa a preservar como output nesse modo) com semente `pilot_seed + retry_seed_offset`, re-montagem e re-validação — via aliases `*_RETRY` com `publishDir` próprios definidos no `nextflow.config` (sem os overrides, sobrescreveriam os artefatos da tentativa 0). O MITOS2 anota a montagem **arbitrada** (`final_assembly_ch`), nunca uma reprovada que tinha substituta. O Pilot QC também avisa ANTES da montagem quando a referência representa um tandem com unidade ≥ limite de resolução medido (insert real dos pares do piloto — DEC-21).
 - `mitos2.nf` roda `runmitos.py` e depois gera SVGs de estrutura secundária de tRNA/rRNA chamando `RNAplot` diretamente no processo (parseia os arquivos `.nc` do MITFI manualmente).
 
 **`conf/<especie>.config`** — um perfil por espécie (`sra_accession`, `seed`, `genome_range`, `novoplasty_kmers`, `genetic_code`, `organism`, etc.), registrado em `nextflow.config` → `profiles`. Adicionar uma espécie nova = criar um `.config` aqui + registrar o perfil em `nextflow.config`, sem tocar em `main.nf` ou nos módulos (ver seção 7 do [GUIA_EXECUCAO.md](GUIA_EXECUCAO.md)).
