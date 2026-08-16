@@ -9,8 +9,12 @@
 # primeira. Ver DEC-01/DEC-02 no vault.
 #
 # Modos:
-#   head        — primeiros N spots (comportamento antigo; mantido para
-#                 reprodutibilidade e comparação A/B)
+#   head        — N spots CONTÍGUOS começando em <start_offset_frac>×total_spots
+#                 (padrão 0 = primeiros N spots, comportamento antigo). O offset é
+#                 a alavanca da rearbitragem sob download contíguo (DEC-22/DEC-23):
+#                 em head a SEMENTE não muda quais spots entram — só o offset muda.
+#                 Por isso a retentativa desloca o início do bloco (0→50→25→75%) em
+#                 vez de re-semear, que não teria efeito nenhum aqui.
 #   stratified  — N spots distribuídos em W janelas equidistantes ao longo do
 #                 run, com deslocamento aleatório do início de cada janela
 #   dense       — igual a stratified, com W alto; aproxima amostragem aleatória
@@ -20,9 +24,12 @@
 # rand() do awk — implementações de rand() variam entre mawk e gawk, e a
 # reprodutibilidade bit-a-bit é requisito para publicação.
 #
-# Uso: sra_sample.sh <source> <prefix> <n_reads> <mode> <windows> <seed>
-#   source  — acesso SRA (ex: SRR28399504) ou caminho de um .sra local
-#   prefix  — prefixo dos arquivos de saída (<prefix>_1.fastq, <prefix>_2.fastq)
+# Uso: sra_sample.sh <source> <prefix> <n_reads> <mode> <windows> <seed> [start_offset_frac]
+#   source            — acesso SRA (ex: SRR28399504) ou caminho de um .sra local
+#   prefix            — prefixo dos arquivos de saída (<prefix>_1.fastq, <prefix>_2.fastq)
+#   start_offset_frac — só em head: fração [0,1) do run onde o bloco contíguo
+#                       começa (padrão 0). Ignorado em stratified/dense (lá a
+#                       semente é que gera o deslocamento).
 #
 # Saídas: <prefix>_1.fastq, <prefix>_2.fastq, sampling_plan.txt
 # ──────────────────────────────────────────────────────────────────────────────
@@ -34,6 +41,7 @@ N_READS="$3"
 MODE="${4:-stratified}"
 WINDOWS="${5:-10}"
 SEED="${6:-42}"
+START_OFFSET_FRAC="${7:-0}"   # só em head; ver docstring e DEC-23
 
 # ── Total de spots do run ───────────────────────────────────────────────────
 # Só metadados, sem baixar dados.
@@ -95,7 +103,29 @@ fi
 
 # ── Plano de amostragem ─────────────────────────────────────────────────────
 if [[ "$MODE" == "head" ]]; then
-    printf '1\t%d\n' "$N_READS" > sampling_plan.txt
+    # Bloco contíguo de N spots começando em start_offset_frac×total (DEC-23).
+    # offset 0 (padrão) ⇒ spots 1..N, byte-idêntico ao comportamento antigo —
+    # é isto que preserva a montagem bit-a-bit da tentativa 0. A rearbitragem
+    # (DEC-22) passa offset > 0 para deslocar o início: com total desconhecido
+    # (=0) não há como deslocar, então fica no início.
+    START=1
+    if [[ "$TOTAL_SPOTS" -gt 0 ]]; then
+        # O clamp mantém o bloco de N spots dentro do run: se o offset jogaria o
+        # fim além do total, recua o início para que caibam N spots (último bloco
+        # possível). Aritmética em awk (offset é fração), impressa como inteiro.
+        START=$(awk -v t="$TOTAL_SPOTS" -v n="$N_READS" -v o="$START_OFFSET_FRAC" 'BEGIN{
+            s    = int(o * t) + 1
+            last = t - n + 1; if (last < 1) last = 1
+            if (s > last) s = last
+            if (s < 1)    s = 1
+            printf "%d", s
+        }')
+    fi
+    END=$(( START + N_READS - 1 ))
+    if [[ "$TOTAL_SPOTS" -gt 0 && "$END" -gt "$TOTAL_SPOTS" ]]; then
+        END="$TOTAL_SPOTS"
+    fi
+    printf '%d\t%d\n' "$START" "$END" > sampling_plan.txt
 else
     awk -v total="$TOTAL_SPOTS" -v w="$WINDOWS" -v n="$N_READS" -v seed="$SEED" '
     BEGIN {
@@ -130,7 +160,11 @@ else
 fi
 
 N_WINDOWS=$(wc -l < sampling_plan.txt)
-echo "[SAMPLE] Modo: ${MODE} — ${N_WINDOWS} janela(s), semente ${SEED}" >&2
+if [[ "$MODE" == "head" ]]; then
+    echo "[SAMPLE] Modo: head — bloco contíguo, offset ${START_OFFSET_FRAC} do run" >&2
+else
+    echo "[SAMPLE] Modo: ${MODE} — ${N_WINDOWS} janela(s), semente ${SEED}" >&2
+fi
 
 # ── Extração ────────────────────────────────────────────────────────────────
 # Cada janela vai para um diretório próprio (o fastq-dump usa sempre o mesmo

@@ -5,10 +5,17 @@
  * É o mecanismo de tratamento da rearbitragem (DEC-22): quando a validação
  * pós-montagem acusa anomalia de repeat, o número de cópias escolhido pelo
  * montador foi um sorteio de caminho — e a resposta é sortear de novo com
- * outro pool e deixar o detector arbitrar. Janelas com jitter de semente
- * diferente extraem SPOTS DIFERENTES do run; nenhuma requisição de rede.
+ * outro pool e deixar o detector arbitrar.
  *
- * Entradas : tuple (accession, sra), max_reads, script de amostragem, semente
+ * COMO o pool muda depende do modo de amostragem (DEC-23):
+ *   - 'head' (padrão): o download é um bloco CONTÍGUO e a semente não altera
+ *     quais spots entram — quem re-sorteia é o OFFSET de início do bloco
+ *     (retry_offset, ex.: 50% do run). Re-semear em head seria um no-op.
+ *   - 'stratified' (A/B): as janelas com jitter de semente diferente extraem
+ *     spots diferentes — aí a SEMENTE nova é que gera o pool novo.
+ * Passamos ambos ao sampler; cada modo usa o que lhe importa. Nenhuma rede.
+ *
+ * Entradas : tuple (accession, sra), max_reads, script, semente, offset
  * Saídas   : tuple (accession, R1, R2) — pool novo, mesmo volume
  */
 
@@ -24,6 +31,7 @@ process RESAMPLE_POOL {
     val max_reads
     path sampler
     val retry_seed
+    val retry_offset
 
     output:
     tuple val(accession),
@@ -45,13 +53,14 @@ process RESAMPLE_POOL {
 /repository/user/cache-disabled = "true"
 MKFG
 
-    echo "[RESAMPLE] Pool re-sorteado: ${max_reads} spots, semente ${retry_seed} (DEC-22)"
+    echo "[RESAMPLE] Pool re-sorteado (${mode}): ${max_reads} spots — semente ${retry_seed} (stratified) / offset ${retry_offset} do run (head) — DEC-22"
     bash ${sampler} \\
         ${sra} \\
         ${accession} \\
         ${max_reads} \\
         ${mode} \\
         ${windows} \\
-        ${retry_seed}
+        ${retry_seed} \\
+        ${retry_offset}
     """
 }

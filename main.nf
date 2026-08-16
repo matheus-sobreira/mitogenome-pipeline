@@ -184,10 +184,17 @@ workflow {
 
         // ── Etapa 4c: Rearbitragem (DEC-22) ─────────────────────────
         // ALERTA de repeat = o número de cópias foi sorteio de caminho do
-        // montador. Tratamento: re-sortear o pool (semente nova, .sra local,
-        // zero rede), re-montar e deixar o detector arbitrar. Uma tentativa
-        // desenrolada; a montagem da retentativa segue adiante qualquer que
-        // seja seu veredito (última instância — o status final o reporta).
+        // montador. Tratamento: re-sortear o pool (.sra local, zero rede),
+        // re-montar e deixar o detector arbitrar. Uma tentativa desenrolada; a
+        // montagem da retentativa segue adiante qualquer que seja seu veredito
+        // (última instância — o status final o reporta).
+        //
+        // COMO o pool é re-sorteado depende do modo (DEC-23): sob 'head'
+        // (download contíguo, padrão) a semente não muda os spots — é o OFFSET
+        // de início do bloco que re-rola o pool (0→50→25→75%; com uma retentativa,
+        // 50%). Sob 'stratified' (A/B) vale a semente nova. Passamos os dois; o
+        // sampler usa o que o modo exige. Sem o offset, a retentativa sob head
+        // reproduziria o pool idêntico e o mesmo erro bit a bit.
         if (params.assembly_retry != false) {
             verdict0 = ASSEMBLY_VALIDATION.out.verdict
                 .map { sid, f -> tuple(sid, f.text.trim()) }
@@ -200,13 +207,15 @@ workflow {
                 .filter { sid, v -> v == 'ALERTA' }
                 .map    { sid, v -> sid }
 
-            retry_seed = (params.pilot_seed ?: 42) + (params.retry_seed_offset ?: 1000)
+            retry_seed   = (params.pilot_seed ?: 42) + (params.retry_seed_offset ?: 1000)
+            retry_offset = (params.retry_start_offset != null) ? params.retry_start_offset : 0.5
 
             RESAMPLE_POOL(
                 need_retry.combine(SRA_DOWNLOAD.out.sra).map { sid, sra -> tuple(sid, sra) },
                 max_reads_ch,
                 sampler_script,
-                retry_seed
+                retry_seed,
+                retry_offset
             )
             TRIM_GALORE_RETRY(RESAMPLE_POOL.out.reads)
             NOVOPLASTY_RETRY(TRIM_GALORE_RETRY.out.reads, seed_file, read_length_ch, novoplasty_mem)
