@@ -507,8 +507,19 @@ def write_tbl(cds_feats, rna_feats, dloop_parts, seqid, transl_table, seq, outpa
                 out.write(f"\t\t\tproduct\t{product}\n")
 
 
-def write_fsa(fasta_path, seqid, organism, topology, outpath):
-    """Write GenBank-formatted FASTA (.fsa) with proper header."""
+def write_fsa(fasta_path, seqid, organism, topology, transl_table, outpath):
+    """Write GenBank-formatted FASTA (.fsa) with proper header.
+
+    Os modificadores de origem precisam usar os nomes que o table2asn
+    reconhece: 'moltype' (não 'molecule_type') e 'mgcode' (código genético
+    MITOCONDRIAL, não 'gcode', que é o nuclear). Com os nomes errados o
+    table2asn trata o colchete como modificador desconhecido e deixa TODO o
+    header sem parsear — sem organismo, sem location=mitochondrion, código
+    genético 0/1 — o que gera ~50 erros espúrios de 'internal stop' (TGA lido
+    como stop em vez de Trp). Verificado na submissão GenBank das araras
+    (17/08/2026). mgcode usa o transl_table do organismo (2=vertebrado,
+    5=invertebrado), não um valor fixo.
+    """
     seq_lines = []
     with open(fasta_path) as fh:
         for line in fh:
@@ -524,8 +535,8 @@ def write_fsa(fasta_path, seqid, organism, topology, outpath):
             f"[location=mitochondrion] "
             f"[topology={topology}] "
             f"[completeness=complete] "
-            f"[molecule_type=genomic DNA] "
-            f"[gcode=2]"
+            f"[moltype=genomic DNA] "
+            f"[mgcode={transl_table}]"
         )
         out.write(header + "\n")
         # Write 70-char lines
@@ -679,7 +690,7 @@ def main():
     fsa_path = os.path.join(args.outdir, f"{seqid}.fsa")
 
     write_tbl(cds_feats, rna_feats, dloop_parts, seqid, args.transl_table, seq, tbl_path)
-    write_fsa(args.fasta, seqid, args.organism, args.topology, fsa_path)
+    write_fsa(args.fasta, seqid, args.organism, args.topology, args.transl_table, fsa_path)
 
     # Summary
     cds_count = len(cds_feats)
